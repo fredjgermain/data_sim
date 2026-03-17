@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass, fields, field
+from faker import Faker as FakerLib
 
 import typing
 from typing import Annotated
@@ -27,6 +28,37 @@ def inspect_entity(entity: type) -> dict[str, EntityField]:
 
 
 
+def get_primarykey_field[T](entity:type[T]) -> EntityField | None: 
+  entity_fields = inspect_entity(entity).values() 
+  return next((f for f in entity_fields if f.has(PrimaryKey)), None) 
+
+
+@dataclass(frozen=True)
+class PrimaryKey: 
+  pass 
+
+@dataclass(frozen=True)
+class Unique: 
+  pass 
+
+
+@dataclass(frozen=True)
+class Faker:
+    method: str
+    locale: str = "en_US"
+
+@dataclass(frozen=True) 
+class ForeignKey[E]: 
+  entity:type[E] 
+  
+# ! indicates that a field depends on a foreign field. 
+@dataclass(frozen=True) 
+class ForeignFields[E]: 
+  columns:list[str] 
+  entity:type[E] 
+
+
+
 @dataclass
 class SimContext: 
   entities: dict[type, EntityContext] = field(default_factory=dict) 
@@ -39,26 +71,7 @@ class EntityContext:
   generated: pd.DataFrame = field(default_factory=pd.DataFrame) 
   N:int = 0 
   done:bool = False 
-  
-  def get_primarykey(self) -> EntityField | None:
-    entity_fields = inspect_entity(self.entity).values()
-    return next((f for f in entity_fields if f.has(PrimaryKey)), None)
-  
 
-@dataclass(frozen=True)
-class PrimaryKey: 
-  pass 
-
-@dataclass(frozen=True) 
-class ForeignKey[E]: 
-  name:str
-  entity:type[E] 
-  
-# ! indicates that a field depends on a foreign field. 
-@dataclass(frozen=True) 
-class ForeignField[E]: 
-  name:str
-  entity:type[E] 
 
 
 @dataclass
@@ -68,46 +81,36 @@ class EntityField[T]:
   func:callable | None = None 
   annotations: list = field(default_factory=list) 
   
-  def has[A](self, t:type[A]): 
+  def has[A](self, t:type[A]) -> bool: 
+    """Returns true if entity field has the specified annotation. """
     return any([isinstance(a, t) for a in self.annotations]) 
   
-  def get_foreign(self) -> ForeignKey | ForeignField | None:
-    return next((a for a in self.annotations if isinstance(a, (ForeignKey, ForeignField))), None)
+  def get_annotation[A](self, t:type[A]) -> A | None: 
+    return next((a for a in self.annotations if isinstance(a, t)), None) 
   
+  def get_foreign(self) -> ForeignKey | ForeignFields | None:
+    return next((a for a in self.annotations if isinstance(a, (ForeignKey, ForeignFields))), None)
+  
+  def get_foreign_columns(self): 
+    cols = [] 
+    fk = self.get_annotation(ForeignKey) 
+    if fk: 
+      cols.append(get_primarykey_field(fk.entity).name) 
+    ffld = self.get_annotation(ForeignFields) 
+    if ffld:
+      cols.extend(ffld.columns) 
+    return cols 
 
 
 
 @dataclass
 class Simulator: 
-  sim_ctx:SimContext 
+  entities: dict[type, EntityContext] = field(default_factory=dict) 
 
   def simulate_all_entities(self): 
-    for ent_ctx in self.sim_ctx.entities.values(): 
+    for ent_ctx in self.entities.values(): 
       self.simulate_entity(ent_ctx) 
-  
-  
-  def __generation_method__(self, f:EntityField): 
-    if f.has(ForeignKey): 
-      pass # ! pick from foreign 
-  
-  
-  def get_primarykey[T](self, entity:type[T]) -> EntityField:
-    entity_fields = inspect_entity(entity).values()
-    return next((f for f in entity_fields if f.has(PrimaryKey)), None)
-  
-  def get_foreign_df[T](self, entity:type[T]) -> pd.DataFrame: 
-    foreign_ctx = self.sim_ctx.entities[entity] 
-    return pd.concat([foreign_ctx.preexisting, foreign_ctx.generated]) 
-  
-  def get_foreignkeys[T](self, entity:type[T]) -> pd.Series: 
-    foreign_ctx = self.sim_ctx.entities[entity] 
-    fkey = foreign_ctx.get_primarykey()
-    df = pd.concat([foreign_ctx.preexisting, foreign_ctx.generated])
-    if fkey:
-      return df[fkey.name] 
-    return pd.Series([])
-    
-    
+
   
   # ? Assumes foreign Entities have already been defined ? Should not have circular dependencies 
   def simulate_entity(self, ent_ctx:EntityContext): 
@@ -115,58 +118,66 @@ class Simulator:
       return
     
     ent = ent_ctx.entity 
-    
     ent_fields = inspect_entity(ent) 
-    for f in ent_fields.values(): 
-      if f.has(ForeignKey): 
-        # ! collect require foreign field here and pass 
-        generate_foreignkey(self.sim_ctx, ent_ctx, f) 
-        # ! raise exception if foreign entity has not been generated or is empty. 
-        # ent_ctx.generated[f.name] choose from foreign table. 
-        continue 
+    for fld in ent_fields.values(): 
+      df_foreign = self._get_df_foreign(fld) 
+        
+      if fld.func is None and fld.has(ForeignKey):
+        fld.func = generate_foreign_key
+        
+      if fld.func is None and fld.has(Faker):
+        fld.func = generate_with_faker
       
-      if f.func != None: 
-        #foreign_ent = f.get_foreign_entity() 
-        ent_ctx.generated[f.name] = f.func(self.sim_ctx, ent_ctx, f) 
-        ent_ctx.done = True 
-        print(ent_ctx.generated) 
-
-  # def simulate_foreignvalues(self, ent_ctx:EntityContext): 
-  #   ent_fields = inspect_entity(ent_ctx.entity) 
-  #   foreign_fields = [ v for v in ent_fields.values() if v.has(ForeignKey) or v.has(ForeignField)] 
+      if fld.func: 
+        ent_ctx.generated[fld.name] = fld.func(ent_ctx, fld, df_foreign) # ! entity_context, field, foreign values 
+      
+    ent_ctx.done = True
+    result = pd.concat([ent_ctx.preexisting, ent_ctx.generated]).reset_index(drop=True) 
+    print(result) 
+  
+  
+  def _get_df_foreign(self, fld:EntityField):
+    if fld.has(ForeignKey) or fld.has(ForeignFields): 
+      # ! collect required foreign information here and pass the foreign columns later 
+      # ! raise exception if foreign entity is not done or is empty. 
+      for_ent = fld.get_foreign().entity 
+      cols = fld.get_foreign_columns() 
+      for_ctx = self.entities[for_ent] 
+      return pd.concat([for_ctx.preexisting, for_ctx.generated]).reset_index(drop=True)[cols]
+    return pd.DataFrame() 
     
-  #   for f in foreign_fields: 
-  #     if f.func != None: 
-  #       ent_ctx.generated[f.name] = f.func(self.sim_ctx, ent_ctx) 
-  #       print(ent_ctx.generated) 
 
 
-def generate_foreignkey(sim_ctx:SimContext, ent_ctx:EntityContext, ent_field:EntityField) -> pd.Series: 
-  foreign = ent_field.get_foreign() 
-  foreign_ctx = sim_ctx.entities[foreign.entity] 
-  foreignkey_field = foreign_ctx.get_primarykey() # ! find primary key from foreign dataset. 
-  foreignkey_field.name 
-  print(foreignkey_field.name) 
+# ! Generator function 
+def generate_with_faker(ent_ctx: EntityContext, ent_field: EntityField, df_foreign: pd.DataFrame) -> pd.Series:
   
+    print('faker')
+    faker_annotation = ent_field.get_annotation(Faker)
+    if faker_annotation is None:
+      raise ValueError(f"Field '{ent_field.name}' has no Faker annotation.")
+
+    fake = FakerLib(faker_annotation.locale)
+    generator = fake.unique if ent_field.has(Unique) else fake
+
+    method = getattr(generator, faker_annotation.method, None)
+    if method is None:
+        raise ValueError(f"Faker has no method '{faker_annotation.method}'.")
+
+    return pd.Series([method() for _ in range(ent_ctx.N)])
   
 
-# ! template
-def generate_foreignvalue(sim_ctx:SimContext, ent_ctx:EntityContext, ent_field:EntityField) -> pd.Series: 
-  foreign = ent_field.get_foreign() 
-  foreign_ctx = sim_ctx.entities[foreign.entity] 
-  
-  df_foreign = pd.concat([foreign_ctx.preexisting, foreign_ctx.generated]) 
-  foreign_keys = df_foreign[foreign.name] 
-  
-  return np.random.choice(foreign_keys) # ! add conditional here 
+def generate_foreign_key(ent_ctx:EntityContext, ent_field:EntityField, df_foreign:pd.DataFrame) -> pd.Series: 
+  fk = df_foreign.iloc[:, 0] 
+  return np.random.choice(fk, ent_ctx.N) 
 
-
-
-def generate_sequential(sim_ctx:SimContext, ent_ctx:EntityContext, ent_field:EntityField) -> pd.Series: 
+def generate_sequential(ent_ctx:EntityContext, ent_field:EntityField, df_foreign:pd.DataFrame) -> pd.Series: 
   a = ent_ctx.preexisting.shape[0] + 1 
   b = a + ent_ctx.N 
   return pd.Series(range(a, b)) 
 
+
+
+# ! Test case entities 
 @dataclass
 class Region:
   region_id: Annotated[int, PrimaryKey()] 
@@ -174,41 +185,30 @@ class Region:
 @dataclass
 class Customer: 
     customer_id: Annotated[int, generate_sequential, PrimaryKey()] 
-    region_id: Annotated[int, ForeignKey('region_id', Region)] 
+    region_id: Annotated[int, ForeignKey(Region)] 
 
-    # email: Annotated[str, Unique(), Faker("email")] 
+    email: Annotated[str, Unique(), Faker("email")] 
     # first_name: Annotated[str, Faker("first_name")] 
     # age: Annotated[int, Distribution("normal", mean=38, std=12, min=18, max=90)]
     # region: Annotated[str, Categorical(["North", "South", "East", "West"])] 
     # created_at: Annotated[datetime, Temporal(before="updated_at")] # temporal integrity 
     # updated_at: Annotated[datetime, Temporal(after="created_at")]
 
+# Predefined not simulated data. 
 df_region = pd.DataFrame( range(50), columns=['region_id'])
+df_customer = pd.DataFrame( range(100), columns=['customer_id']) 
+df_customer['region_id'] = np.random.choice(df_region['region_id']) 
+df_customer['region_id'] = np.random.choice(df_region['region_id']) 
 
 
-sim = Simulator(SimContext({ 
+# Simulation 
+sim = Simulator({ 
   Region:EntityContext(Region, preexisting=df_region, done=True), 
-  Customer:EntityContext(Customer, N=100) 
-  })) 
+  Customer:EntityContext(Customer, preexisting=df_customer, N=100) 
+  }) 
 sim.simulate_all_entities()
 
 
 
-
-
-
-
-#sim_ctx = SimContext([]) 
-
-# preexisting = pd.DataFrame(range(50), columns=['customer_id'])
-# ent_ctx = EntityContext(preexisting=preexisting) 
-
-
-# field, gen_func, *annotations = ['customer_id', generate_sequential, PrimaryKey(), Unique()] 
-
-# # if annotations does not include Foreign key, generate foreign key at the end 
-# ent_ctx.generated[field] = gen_func(sim_ctx, ent_ctx) 
-
-# print(ent_ctx.generated) 
 
 
