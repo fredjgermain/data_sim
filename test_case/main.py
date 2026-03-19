@@ -1,7 +1,21 @@
+# I think I have a better idea. Instead, 
+# I could define an annotation like "PrimaryTime" which would a unique field per entity defining when an 
+# observation of that entity has been created. This ought to be accessible in a way similar to getting the PrimaryKey of a foreign entity. 
+
+
+
+
+
+
+
+
+
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass, fields, field
 from faker import Faker as FakerLib
+import rstr
+import datetime 
 
 import typing
 from typing import Annotated
@@ -27,11 +41,19 @@ def inspect_entity(entity: type) -> dict[str, EntityField]:
     return result
 
 
+def get_primarytime_field[T](entity:type[T]) -> EntityField | None:
+  entity_fields = inspect_entity(entity).values() 
+  return next((f for f in entity_fields if f.has(CreationTime)), None) 
 
 def get_primarykey_field[T](entity:type[T]) -> EntityField | None: 
   entity_fields = inspect_entity(entity).values() 
   return next((f for f in entity_fields if f.has(PrimaryKey)), None) 
 
+
+@dataclass(frozen=True)
+class CreationTime:
+  start: datetime.datetime = datetime.datetime(2020, 1, 1)
+  end: datetime.datetime = field(default_factory=datetime.datetime.now)
 
 @dataclass(frozen=True)
 class PrimaryKey: 
@@ -57,7 +79,11 @@ class ForeignFields[E]:
   columns:list[str] 
   entity:type[E] 
 
-
+@dataclass(frozen=True)
+class Pattern:
+  regex: str
+    
+    
 
 @dataclass
 class SimContext: 
@@ -124,9 +150,12 @@ class Simulator:
         
       if fld.func is None and fld.has(ForeignKey):
         fld.func = generate_foreign_key
-        
+      
       if fld.func is None and fld.has(Faker):
         fld.func = generate_with_faker
+      
+      if fld.func is None and fld.has(Pattern):
+        fld.func = generate_with_pattern
       
       if fld.func: 
         ent_ctx.generated[fld.name] = fld.func(ent_ctx, fld, df_foreign) # ! entity_context, field, foreign values 
@@ -149,21 +178,24 @@ class Simulator:
 
 
 # ! Generator function 
+def generate_with_pattern(ent_ctx: EntityContext, ent_field: EntityField, df_foreign: pd.DataFrame) -> pd.Series:
+  pattern = ent_field.get_annotation(Pattern).regex
+  return pd.Series([rstr.xeger(pattern) for _ in range(ent_ctx.N)])
+
+
 def generate_with_faker(ent_ctx: EntityContext, ent_field: EntityField, df_foreign: pd.DataFrame) -> pd.Series:
-  
-    print('faker')
-    faker_annotation = ent_field.get_annotation(Faker)
-    if faker_annotation is None:
-      raise ValueError(f"Field '{ent_field.name}' has no Faker annotation.")
+  faker_annotation = ent_field.get_annotation(Faker)
+  if faker_annotation is None:
+    raise ValueError(f"Field '{ent_field.name}' has no Faker annotation.")
 
-    fake = FakerLib(faker_annotation.locale)
-    generator = fake.unique if ent_field.has(Unique) else fake
+  fake = FakerLib(faker_annotation.locale)
+  generator = fake.unique if ent_field.has(Unique) else fake
 
-    method = getattr(generator, faker_annotation.method, None)
-    if method is None:
-        raise ValueError(f"Faker has no method '{faker_annotation.method}'.")
+  method = getattr(generator, faker_annotation.method, None)
+  if method is None:
+      raise ValueError(f"Faker has no method '{faker_annotation.method}'.")
 
-    return pd.Series([method() for _ in range(ent_ctx.N)])
+  return pd.Series([method() for _ in range(ent_ctx.N)])
   
 
 def generate_foreign_key(ent_ctx:EntityContext, ent_field:EntityField, df_foreign:pd.DataFrame) -> pd.Series: 
@@ -182,29 +214,43 @@ def generate_sequential(ent_ctx:EntityContext, ent_field:EntityField, df_foreign
 class Region:
   region_id: Annotated[int, PrimaryKey()] 
 
+
 @dataclass
 class Customer: 
     customer_id: Annotated[int, generate_sequential, PrimaryKey()] 
+    created_at: Annotated[datetime, CreationTime()] # temporal integrity 
     region_id: Annotated[int, ForeignKey(Region)] 
 
     email: Annotated[str, Unique(), Faker("email")] 
+    code: Annotated[str, Pattern(r'[A-Z]{3}-\d{4}')] 
+
+
     # first_name: Annotated[str, Faker("first_name")] 
-    # age: Annotated[int, Distribution("normal", mean=38, std=12, min=18, max=90)]
+    # age: Annotated[int, Distribution("normal", mean=38, std=12, min=18, max=90)] 
     # region: Annotated[str, Categorical(["North", "South", "East", "West"])] 
     # created_at: Annotated[datetime, Temporal(before="updated_at")] # temporal integrity 
     # updated_at: Annotated[datetime, Temporal(after="created_at")]
 
+@dataclass
+class Transaction:
+  transaction_id: Annotated[int, PrimaryKey()]
+  created_at: Annotated[datetime, CreationTime()] # temporal integrity 
+  customer_id: Annotated[int, ForeignKey(Customer)]
+  
+
+
 # Predefined not simulated data. 
-df_region = pd.DataFrame( range(50), columns=['region_id'])
+df_region = pd.DataFrame( range(50), columns=['region_id']) 
 df_customer = pd.DataFrame( range(100), columns=['customer_id']) 
 df_customer['region_id'] = np.random.choice(df_region['region_id']) 
-df_customer['region_id'] = np.random.choice(df_region['region_id']) 
-
+df_customer['email'] = ' ... '
+df_customer['code'] = ' ... '
 
 # Simulation 
 sim = Simulator({ 
   Region:EntityContext(Region, preexisting=df_region, done=True), 
-  Customer:EntityContext(Customer, preexisting=df_customer, N=100) 
+  Customer:EntityContext(Customer, preexisting=df_customer, N=100), 
+  Transaction:EntityContext(Transaction, N=1000) 
   }) 
 sim.simulate_all_entities()
 
