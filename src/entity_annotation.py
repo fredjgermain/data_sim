@@ -2,6 +2,9 @@ from dataclasses import dataclass, field
 import datetime
 
 
+from src.entity_common import IEntity
+
+
 # ---------------------------------------------------------------------------
 # Annotations
 # ---------------------------------------------------------------------------
@@ -15,7 +18,7 @@ class CreationTime:
         end:   Latest possible creation datetime (inclusive).
                Defaults to now if omitted.
     """
-    start: datetime.datetime = datetime.datetime(2020, 1, 1)
+    start: datetime.datetime = datetime.datetime(2000, 1, 1)
     end: datetime.datetime = field(default_factory=datetime.datetime.now)
 
 
@@ -36,15 +39,15 @@ class Faker:
 
 
 @dataclass(frozen=True)
-class ForeignKey[E]:
-    entity: type[E]
+class ForeignKey:
+    entity: type[IEntity]
 
 
 # ! indicates that a field depends on a foreign field.
 @dataclass(frozen=True)
-class ForeignFields[E]:
+class ForeignFields:
     columns: list[str]
-    entity: type[E]
+    entity: type[IEntity]
 
 
 @dataclass(frozen=True)

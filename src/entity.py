@@ -1,13 +1,14 @@
 import pandas as pd
 from dataclasses import dataclass, fields, field
-
 import typing
+from typing import Protocol, Callable, Any
 
-#from src.entity_annotation import PrimaryKey, CreationTime, Faker, ForeignFields, ForeignKey, Pattern, Unique 
+from src.entity_annotation import PrimaryKey, CreationTime, Faker, ForeignFields, ForeignKey, Pattern, Unique 
+from src.entity_common import IEntity, EntityField
 
 
 
-class Entity:
+class Entity(IEntity):
     """Base class for all simulated entities.
 
     Provides classmethod introspection and enforces annotation uniqueness
@@ -50,65 +51,3 @@ class Entity:
     def primary_time_field(cls) -> EntityField | None:
         return next((f for f in cls.inspect().values() if CreationTime in f.annotations ), None)
 
-
-
-@dataclass
-class EntityField[T]:
-    name: str
-    base_type: type[T]
-    func: callable | None = None
-    annotations: dict = field(default_factory=dict)
-
-
-from dataclasses import dataclass, field
-import datetime
-
-
-# ---------------------------------------------------------------------------
-# Annotations
-# ---------------------------------------------------------------------------
-
-@dataclass(frozen=True)
-class CreationTime:
-    """Marks the single datetime field that records when an entity was created.
-    
-    Args:
-        start: Earliest possible creation datetime (inclusive).
-        end:   Latest possible creation datetime (inclusive).
-               Defaults to now if omitted.
-    """
-    start: datetime.datetime = datetime.datetime(2020, 1, 1)
-    end: datetime.datetime = field(default_factory=datetime.datetime.now)
-
-
-@dataclass(frozen=True)
-class PrimaryKey:
-    pass
-
-
-@dataclass(frozen=True)
-class Unique:
-    pass
-
-
-@dataclass(frozen=True)
-class Faker:
-    method: str
-    locale: str = "en_US"
-
-
-@dataclass(frozen=True)
-class ForeignKey[E:Entity]:
-    entity: type[Entity]
-
-
-# ! indicates that a field depends on a foreign field.
-@dataclass(frozen=True)
-class ForeignFields[E:Entity]:
-    columns: list[str]
-    entity: type[Entity]
-
-
-@dataclass(frozen=True)
-class Pattern:
-    regex: str
