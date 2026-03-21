@@ -42,6 +42,6 @@ class EntityContext:
   def get_data(self, *annotations) -> pd.DataFrame: 
     flds = self.entity.get_fields_with_annotation(*annotations) 
     df = pd.concat([self.preexisting, self.generated]) 
-    selection = [ fld.name for fld in flds ] or list(df.columns) 
+    selection = [ fld.name for fld in flds if fld.name in list(df.columns) ] or list(df.columns) 
     return df[selection]
 

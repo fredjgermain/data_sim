@@ -30,6 +30,8 @@ def aggregate_foreign_data(
         df_foreign = foreign_ctx.get_data(PrimaryKey, *foreign_annotations) 
         
         # ! add suffix to avoid name collision 
+        # ! if creation time not defined it is now empty, but it should be set to its default 
+        
         rename_map = { c:f"{fld.name}_{c}" for c in df_foreign.columns if c != foreign_pk.name } 
         df_foreign = df_foreign.rename(columns=rename_map) 
         agg_cols[fld.name] = list(rename_map.values()) 
@@ -60,12 +62,24 @@ def generate_creationtime(entities: dict[type, EntityContext], ent_ctx: EntityCo
     df['start_date'] = time_annotation.start
     df['start_date'] = df[['start_date', *time_cols]].max(axis=1).clip(lower=time_annotation.start)
     df['end_date'] = time_annotation.end
-    print(df)
     return generate_dates(df['start_date'], df['end_date'])
 
 
 
-def generate_sequential(ent_ctx: EntityContext, ent_field: EntityField, df_foreign: pd.DataFrame) -> pd.Series:
+def generate_sequential(ent_ctx: EntityContext) -> pd.Series:
     a = ent_ctx.preexisting.shape[0] + 1
     b = a + ent_ctx.N
     return pd.Series(range(a, b))
+  
+  
+def generate_fk_fields(entities: dict[type, EntityContext], ent_ctx: EntityContext) -> dict[str, pd.Series]:
+    generated = {}
+    for fld in ent_ctx.entity.get_fields_with_annotation(ForeignKey):
+        fk: ForeignKey = fld.annotations[ForeignKey]
+        foreign_ctx = entities[fk.entity]
+        foreign_pk = fk.entity.primary_key_field()
+        foreign_data = foreign_ctx.get_data(PrimaryKey)
+        generated[fld.name] = pd.Series(
+            np.random.choice(foreign_data[foreign_pk.name], size=ent_ctx.N)
+        )
+    return generated
