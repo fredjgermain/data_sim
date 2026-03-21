@@ -31,7 +31,7 @@ class EntityContext:
 def generate_fkey(entities: dict[type, EntityContext], ent_ctx:EntityContext, fld:EntityField) -> pd.Series: 
   fkey:ForeignKey = fld.annotations[ForeignKey] 
   foreign_entity = fkey.entity 
-  forekeyfld = foreign_entity.primary_key_field() 
+  forekeyfld = foreign_entity.get_primary_key_field() 
   
   foreign_ctx = entities[foreign_entity] 
   df_foreign = pd.concat([foreign_ctx.preexisting, foreign_ctx.generated]) 
@@ -41,7 +41,7 @@ def generate_fkey(entities: dict[type, EntityContext], ent_ctx:EntityContext, fl
 
 def get_entity_primaries(ent_ctx:EntityContext) -> pd.DataFrame: 
   ent:Entity = ent_ctx.entity 
-  primarykey = ent.primary_key_field() 
+  primarykey = ent.get_primary_key_field() 
   creationtime = ent.primary_time_field() 
   
   selection = [ n for n in [primarykey.name, creationtime.name] if n is not None ] 
@@ -55,7 +55,7 @@ def get_entity_data(ent_ctx:EntityContext) -> pd.DataFrame:
 # ! If creation time is generated last then it can be generated to accommodate all other constraints 
 def generate_creationtime(entities: dict[type, EntityContext], ent_ctx:EntityContext, fld:EntityField) -> pd.Series: 
   ent:Entity = ent_ctx.entity 
-  primarykey = ent.primary_key_field() 
+  primarykey = ent.get_primary_key_field() 
   
   flds = ent.inspect() 
   deps_flds = { k:fld for k,fld in flds.items() if ForeignKey in fld.annotations } 

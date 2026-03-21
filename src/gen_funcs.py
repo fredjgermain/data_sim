@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
 
-#from src.entity_annotation import PrimaryKey, CreationTime, Faker, ForeignFields, ForeignKey, Pattern, Unique 
-from src.entity import Entity, EntityField, PrimaryKey, CreationTime, Faker, ForeignFields, ForeignKey, Pattern, Unique 
-from src.entity_common import EntityField, EntityContext
+from src.entity_annotation import PrimaryKey, CreationTime, Faker, ForeignFields, ForeignKey, Pattern, Unique 
+from src.entity import EntityContext, Entity 
+from src.entity_common import EntityField 
 
 
 
@@ -20,14 +20,14 @@ def aggregate_foreign_data(
 
     Returns the merged dataframe with FK columns dropped after joining.
     """
-    df_agg = ent_ctx.get_data(PrimaryKey, ForeignKey) 
-    fk_fields = ent_ctx.entity.get_fields_with_annotation(ForeignKey)
+    df_agg = ent_ctx.get_data([PrimaryKey, ForeignKey]) 
+    fk_fields = ent_ctx.entity.get_fields_by_annotation([ForeignKey])
     agg_cols = {}
     for fld in fk_fields:
         fk: ForeignKey = fld.annotations[ForeignKey] 
         foreign_ctx = entities[fk.entity] 
-        foreign_pk = fk.entity.primary_key_field() 
-        df_foreign = foreign_ctx.get_data(PrimaryKey, *foreign_annotations) 
+        foreign_pk = fk.entity.get_primary_key_field() 
+        df_foreign = foreign_ctx.get_data([PrimaryKey, *foreign_annotations]) 
         
         # ! add suffix to avoid name collision 
         # ! if creation time not defined it is now empty, but it should be set to its default 
@@ -52,7 +52,7 @@ def generate_dates(start_date: pd.Series, end_date: pd.Series) -> pd.Series:
 
 def generate_creationtime(entities: dict[type, EntityContext], ent_ctx: EntityContext) -> pd.Series:
     #pk = ent_ctx.entity.primary_key_field()
-    ptime = ent_ctx.entity.primary_time_field()
+    ptime = ent_ctx.entity.get_primary_time_field()
     time_annotation: CreationTime = ptime.annotations[CreationTime]
     
     df, agg_cols = aggregate_foreign_data(entities, ent_ctx, foreign_annotations=[CreationTime]) 
@@ -74,11 +74,11 @@ def generate_sequential(ent_ctx: EntityContext) -> pd.Series:
   
 def generate_fk_fields(entities: dict[type, EntityContext], ent_ctx: EntityContext) -> dict[str, pd.Series]:
     generated = {}
-    for fld in ent_ctx.entity.get_fields_with_annotation(ForeignKey):
+    for fld in ent_ctx.entity.get_fields_by_annotation([ForeignKey]):
         fk: ForeignKey = fld.annotations[ForeignKey]
         foreign_ctx = entities[fk.entity]
-        foreign_pk = fk.entity.primary_key_field()
-        foreign_data = foreign_ctx.get_data(PrimaryKey)
+        foreign_pk = fk.entity.get_primary_key_field()
+        foreign_data = foreign_ctx.get_data([PrimaryKey])
         generated[fld.name] = pd.Series(
             np.random.choice(foreign_data[foreign_pk.name], size=ent_ctx.N)
         )

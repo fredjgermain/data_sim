@@ -39,15 +39,45 @@ class Entity(IEntity):
                 result[f.name] = EntityField(name=f.name, base_type=hint)
         return result
 
-    @classmethod  
-    def get_fields_with_annotation(cls, *annotations) -> list[EntityField]:
-        return [fld for fld in cls.inspect().values() if any(a in fld.annotations for a in annotations)]
+    @classmethod
+    def get_fields_by_annotation(cls, selection: list = None, exclusion: list = None) -> list[EntityField]:
+        selection, exclusion = selection or [], exclusion or []
+        return [
+            fld for fld in cls.inspect().values()
+            if (not selection or any(a in fld.annotations for a in selection))
+            and (not exclusion or not any(a in fld.annotations for a in exclusion))
+        ]
 
     @classmethod
-    def primary_key_field(cls) -> EntityField | None:
+    def get_primary_key_field(cls) -> EntityField | None:
         return next((f for f in cls.inspect().values() if PrimaryKey in f.annotations ), None)
 
     @classmethod
-    def primary_time_field(cls) -> EntityField | None:
+    def get_primary_time_field(cls) -> EntityField | None:
         return next((f for f in cls.inspect().values() if CreationTime in f.annotations ), None)
 
+
+
+@dataclass
+class EntityContext:
+  entity: type[IEntity] 
+  preexisting: pd.DataFrame = field(default_factory=pd.DataFrame)
+  generated: pd.DataFrame = field(default_factory=pd.DataFrame)
+  N: int = 0
+  done: bool = False
+  
+  def get_primarykey_values(self) -> pd.Series:
+    col = self.entity.get_primary_key_field().name
+    return pd.concat([self.preexisting, self.generated])[col] 
+
+  def get_creationtime_values(self) -> pd.Series:
+    col = self.entity.get_primary_time_field().name
+    return pd.concat([self.preexisting, self.generated])[col]
+
+  def get_data(self, selection:list = None, exclusion:list = None ) -> pd.DataFrame: 
+    flds = self.entity.get_fields_by_annotation(selection, exclusion) 
+    df = pd.concat([self.preexisting, self.generated]) 
+    selection = [ fld.name for fld in flds if fld.name in list(df.columns) ] or list(df.columns) 
+    return df[selection]
+
+  

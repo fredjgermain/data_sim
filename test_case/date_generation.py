@@ -21,9 +21,8 @@ class EntityContext:
   N: int = 0
   done: bool = False
 
-
-  def get_data(self, *annotations) -> pd.DataFrame: 
-    flds = self.entity.get_fields_with_annotation(*annotations) 
+  def get_data(self, selection: list = None, exclusion: list = None) -> pd.DataFrame: 
+    flds = self.entity.get_fields_by_annotation(selection, exclusion) 
     df = pd.concat([self.preexisting, self.generated]) 
     selection = [ fld.name for fld in flds ] or list(df.columns) 
     return df[selection]
@@ -33,15 +32,15 @@ class EntityContext:
 # ! if creation depends on an other table it must generate Creation time at the end 
 # ! If creation time is generated last then it can be generated to accommodate all other constraints 
 def generate_creationtime(entities: dict[type, EntityContext], ent_ctx:EntityContext, fld:EntityField=None) -> pd.Series: 
-  pk = ent_ctx.entity.primary_key_field() 
+  pk = ent_ctx.entity.get_primary_key_field() 
   ptime = ent_ctx.entity.primary_time_field() 
-  flds = ent_ctx.entity.get_fields_with_annotation(ForeignKey) 
+  flds = ent_ctx.entity.get_fields_by_annotation([ForeignKey]) 
   df_current = ent_ctx.get_data(PrimaryKey, ForeignKey) 
   
   ## Accumulate all foreign creation times into a single dataframe. 
   for f in flds: 
     fk:ForeignKey = f.annotations[ForeignKey] 
-    fpk = fk.entity.primary_key_field() 
+    fpk = fk.entity.get_primary_key_field() 
     df_foreign = entities[fk.entity].get_data(PrimaryKey, CreationTime) 
     
     df_current = pd.merge(df_current, df_foreign, left_on=f.name, right_on=fpk.name, how='left') 
@@ -123,7 +122,7 @@ class Transaction(Entity):
     region_id:       Annotated[int, ForeignKey(Region)]
 
 
-flds = Transaction.get_fields_with_annotation(PrimaryKey, ForeignKey) 
+flds = Transaction.get_fields_by_annotation([PrimaryKey, ForeignKey]) 
 print([ f.name for f in flds]) 
 
 
