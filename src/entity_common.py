@@ -34,6 +34,10 @@ class EntityContext:
   generated: pd.DataFrame = field(default_factory=pd.DataFrame)
   N: int = 0
   done: bool = False
+  
+  def get_columns(self, *annotations) -> list[str]: 
+    flds = self.entity.get_fields_with_annotation(*annotations) 
+    return [ fld.name for fld in flds ] 
 
   def get_data(self, *annotations) -> pd.DataFrame: 
     flds = self.entity.get_fields_with_annotation(*annotations) 
