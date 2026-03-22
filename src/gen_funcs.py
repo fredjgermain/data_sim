@@ -1,9 +1,13 @@
 import numpy as np
 import pandas as pd
+import rstr
+from faker import Faker as FakerLib
+from enum import Enum
+from scipy.stats import skewnorm
 
-from src.entity_annotation import PrimaryKey, CreationTime, Faker, ForeignFields, ForeignKey, Pattern, Unique 
+from src.entity_annotation import PrimaryKey, CreationTime, Faker, Dependence, ForeignKey, Pattern, Unique, NormalDist, UniformDist, GammaDist, PoissonDist, ExponentialDist 
 from src.entity import EntityContext, Entity 
-from src.entity_common import EntityField 
+from src.entity_common import EntityField, Distribution
 
 
 
@@ -62,7 +66,9 @@ def generate_creationtime(entities: dict[type, EntityContext], ent_ctx: EntityCo
     df['start_date'] = time_annotation.start
     df['start_date'] = df[['start_date', *time_cols]].max(axis=1).clip(lower=time_annotation.start)
     df['end_date'] = time_annotation.end
-    return generate_dates(df['start_date'], df['end_date'])
+    
+    fld = ent_ctx.entity.get_primary_time_field() 
+    ent_ctx.generated[fld.name] = generate_dates(df['start_date'], df['end_date']) 
 
 
 
@@ -83,3 +89,25 @@ def generate_fk_fields(entities: dict[type, EntityContext], ent_ctx: EntityConte
             np.random.choice(foreign_data[foreign_pk.name], size=ent_ctx.N)
         )
     return generated
+
+
+
+def generate_with_pattern(ent_ctx: EntityContext, ent_field: EntityField, df_foreign: pd.DataFrame) -> pd.Series:
+  ptrn:Pattern = ent_field.annotations[Pattern]
+  ptrn.regex
+  return pd.Series([rstr.xeger(ptrn) for _ in range(ent_ctx.N)])
+
+
+def generate_with_faker(ent_ctx: EntityContext, ent_field: EntityField, df_foreign: pd.DataFrame) -> pd.Series:
+    fkr:Faker = ent_field.annotations[Faker]
+    fake = FakerLib(fkr.locale)
+    generator = fake.unique if ent_field.annotations[Unique] else fake
+
+    method = getattr(generator, fkr.method, None)
+    if method is None:
+        raise ValueError(f"Faker has no method '{fkr.method}'.")
+
+    return pd.Series([method() for _ in range(ent_ctx.N)])
+
+
+

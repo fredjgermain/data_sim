@@ -8,7 +8,7 @@ import datetime
 from typing import Annotated
 
 #from src.entity_annotation import PrimaryKey, CreationTime, Faker, ForeignFields, ForeignKey, Pattern, Unique 
-from src.entity import Entity, EntityField, PrimaryKey, CreationTime, Faker, ForeignFields, ForeignKey, Pattern, Unique 
+from src.entity import Entity, EntityField, PrimaryKey, CreationTime, Faker, Dependence, ForeignKey, Pattern, Unique 
 
 
 
@@ -70,7 +70,6 @@ def generate_creationtime(entities: dict[type, EntityContext], ent_ctx:EntityCon
     df_creationtimes = pd.merge(df_creationtimes, df, on=primarykey.name, how='left') 
 
 
-
 def generate_with_pattern(ent_ctx: EntityContext, ent_field: EntityField, df_foreign: pd.DataFrame) -> pd.Series:
   ptrn:Pattern = ent_field.annotations[Pattern]
   ptrn.regex
@@ -87,6 +86,7 @@ def generate_with_faker(ent_ctx: EntityContext, ent_field: EntityField, df_forei
         raise ValueError(f"Faker has no method '{fkr.method}'.")
 
     return pd.Series([method() for _ in range(ent_ctx.N)])
+
 
 
 def generate_sequential(ent_ctx: EntityContext, ent_field: EntityField, df_foreign: pd.DataFrame) -> pd.Series:
@@ -235,7 +235,7 @@ class Simulator:
         The CreationTime column is included so that generate_foreign_key can
         enforce temporal integrity without needing a separate lookup.
         """
-        if ForeignKey in fld.annotations or ForeignFields in fld.annotations:
+        if ForeignKey in fld.annotations or Dependence in fld.annotations:
             for_ann = fld.get_foreign()
             for_ent = for_ann.entity
             for_ctx = self.entities[for_ent]

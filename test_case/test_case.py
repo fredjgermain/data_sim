@@ -8,9 +8,14 @@ from typing import Annotated, Any
 
 #from src.entity_annotation import PrimaryKey, CreationTime, Faker, ForeignFields, ForeignKey, Pattern, Unique 
 from src.entity import  EntityContext, Entity 
-from src.entity_annotation import  PrimaryKey, CreationTime, Faker, ForeignFields, ForeignKey, Pattern, Unique 
-from src.entity_common import EntityField 
-from src.gen_funcs import generate_creationtime, generate_sequential, generate_dates, aggregate_foreign_data
+from src.entity_annotation import (
+    PrimaryKey, CreationTime, Faker, Dependence, ForeignKey, Pattern, Unique, 
+    NormalDist, UniformDist, GammaDist, PoissonDist, ExponentialDist 
+)
+from src.entity_common import EntityField, Dist
+from src.gen_funcs import (
+    generate_creationtime, generate_sequential, generate_dates, aggregate_foreign_data, 
+)
 
 
 
@@ -46,6 +51,7 @@ class Customer(Entity):
     region_id:   Annotated[int, ForeignKey(Region)]
     email:       Annotated[str, Unique(), Faker("email")]
     code:        Annotated[str, Pattern(r'[A-Z]{3}-\d{4}')]
+    age:         Annotated[int, NormalDist(min=0, mean=45, std=20, rounding=0)]
 
 
 @dataclass
@@ -101,8 +107,10 @@ df_customer_pre = pd.DataFrame({
     'created_at':  np.random.choice(customer_date_range, N), 
     'region_id':   np.random.choice(df_region['region_id'], size=N),
     'email':       ['preexisting@example.com'] * N,
-    'code':        ['PRE-0000'] * N,
+    'code':        ['PRE-0000'] * N, 
+    'age':         Customer.inspect()['age'].get(NormalDist).generate(N)
 })
+
 
 
 N = 10
@@ -114,7 +122,7 @@ df_store_pre = pd.DataFrame({
 })
 
 
-N = 100000
+N = 10000
 tra_time:CreationTime = Transaction.get_primary_time_field().annotations[CreationTime] 
 tra_date_range = pd.date_range(start=tra_time.start, end=tra_time.end, freq='D')
 df_transaction_pre = pd.DataFrame({ 

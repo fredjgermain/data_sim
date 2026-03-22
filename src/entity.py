@@ -3,8 +3,12 @@ from dataclasses import dataclass, fields, field
 import typing
 from typing import Protocol, Callable, Any
 
-from src.entity_annotation import PrimaryKey, CreationTime, Faker, ForeignFields, ForeignKey, Pattern, Unique 
+from src.entity_annotation import (
+    PrimaryKey, CreationTime, Faker, Dependence, ForeignKey, Pattern, Unique, 
+    NormalDist, UniformDist, GammaDist, PoissonDist, ExponentialDist 
+)
 from src.entity_common import IEntity, EntityField
+
 
 
 
