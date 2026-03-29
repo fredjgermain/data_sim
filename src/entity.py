@@ -119,9 +119,13 @@ class Entity(IEntity):
     ) -> list[IEntityField]:
         
         flds_in = cls.find(inclusion) if inclusion is not None else list(cls.inspect().values())
-        flds_ex = Entity.find(exclusion) if exclusion is not None else []
+        flds_ex = cls.find(exclusion) if exclusion is not None else []
         name_ex = {fld.name for fld in flds_ex} 
         return [fld for fld in flds_in if fld.name not in name_ex] 
+    
+    @classmethod
+    def get(cls, selection:str | type) -> IEntityField:
+        return next(iter(cls.find([selection])), None)
 
     @classmethod
     def get_primary_key_field(cls) -> IEntityField:

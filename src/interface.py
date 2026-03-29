@@ -30,6 +30,9 @@ class IEntity(Protocol):
     def inspect(cls) -> dict[str, IEntityField]: ... 
 
     @classmethod
+    def get(cls, selection:str | type) -> IEntityField: ...
+        
+    @classmethod
     def find(cls, selection: list[str | type]) -> list[IEntityField]: ...
     
     @classmethod
@@ -57,6 +60,12 @@ class IEntityContext(Protocol):
     def get_primary_key_values(self) -> pd.Series: ...
 
     def get_creation_time_values(self) -> pd.Series: ...
+    
+    def get_serie(self, 
+        selection: str | type, 
+        preexisting: bool = True, 
+        generated: bool = True
+    ) -> pd.Series: ...
     
     def get_data(
         self,

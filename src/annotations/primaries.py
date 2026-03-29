@@ -68,9 +68,9 @@ class CreationTime(IGen):
 
     def generate(self, ctx: GenCtx) -> pd.Series: 
         df_start = ctx.current_data.copy() 
-        df_start['start'] = self.start 
+        df_start['start'] = [self.start] * ctx.N # ! careful with dimensions. 
         start_date = df_start.max(axis=1) 
-        end_date = self.end
+        end_date = self.end 
         
         ranges = (end_date - start_date).dt.days.clip(lower=0)
         random_days = (np.random.rand(len(start_date)) * (ranges + 1)).astype(int)

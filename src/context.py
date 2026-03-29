@@ -1,7 +1,8 @@
 import pandas as pd 
 from dataclasses import dataclass, field
 
-from src.interface import IEntity, IEntityContext 
+from src.annotations.primaries import PrimaryKey, CreationTime
+from src.interface import IEntity, IEntityContext, IEntityField 
 
 
 
@@ -36,19 +37,28 @@ class EntityContext(IEntityContext):
     generated:   pd.DataFrame = field(default_factory=pd.DataFrame)
 
     def get_primary_key_values(self) -> pd.Series:
-      field = self.entity.get_primary_key_field()
-      if field is None:
-          return pd.Series(dtype=object)
-      return pd.concat([self.preexisting, self.generated])[field.name].dropna().reset_index(drop=True)
+        return self.get_serie(PrimaryKey)
 
-    def get_creation_time_values(self) -> pd.Series:
-        field = self.entity.get_creation_time_field()
-        if field is None:
-            return pd.Series(dtype=object)
-        return pd.concat([self.preexisting, self.generated])[field.name].dropna().reset_index(drop=True)
+    def get_creation_time_values(self) -> pd.Series: 
+        return self.get_serie(CreationTime)
 
-    def get_data(
-        self,
+    def get_serie(self, 
+        selection: str | type, 
+        preexisting: bool = True, 
+        generated: bool = True
+    ) -> pd.Series:
+        pre = self.preexisting if preexisting else pd.DataFrame() 
+        gen = self.generated if generated else pd.DataFrame() 
+        
+        df = pd.concat([pre, gen]).reset_index(drop=True) 
+        fld = self.entity.get(selection) 
+        if fld is None or fld.name not in list(df.columns): 
+            return pd.Series(dtype=object) 
+        return df[fld.name] 
+
+
+
+    def get_data( self,
         include: list[str | type] | None = None, 
         exclude: list[str | type] | None = None, 
         preexisting: bool = True, 
@@ -60,6 +70,8 @@ class EntityContext(IEntityContext):
       df = pd.concat([pre, gen], axis=0).reset_index(drop=True)
       flds = self.entity.select(include, exclude)
       selection = [ f.name for f in flds if f.name in list(df.columns)]
-      return df[selection]
+      if selection:
+        return df[selection]
+      return pd.DataFrame()
   
 

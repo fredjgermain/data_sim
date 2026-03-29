@@ -98,6 +98,7 @@ class DataSimulator:
             
             # ! Aggregate creation time to find lower bound 
             df_agg_ct = self._aggregate_creation_time(ctx) 
+            print(entity, df_agg_ct)
             gen_ctx = GenCtx(name=ct_fld.name, N=ctx.N, current_data=df_agg_ct) 
             ann = ct_fld.get(CreationTime) 
             try:

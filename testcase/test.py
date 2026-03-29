@@ -38,6 +38,7 @@ class Customer(Entity):
                      start=datetime.datetime(2015, 1, 1),
                      end=datetime.datetime(2023, 12, 31),
                  )]
+    region_id:   Annotated[int,   ForeignKey(Region)]
     email:       Annotated[str,  GenFaker("email"), Unique()]
     sexe:        Annotated[int,  GenCategorical(encoding={0:'male', 1:'female'})] 
     age:         Annotated[int,  GenNormal(min=18, max=90, mean=40, std=15, rounding=0)]
@@ -88,14 +89,14 @@ entities = {
     Transaction: EntityContext(Transaction, pd.DataFrame(),        N=1000),
 }
 
-sim = DataSimulator(entities)
-results = sim.simulate()
+sim = DataSimulator(entities) 
+results = sim.simulate() 
 
-for k, rep in sim.report.items():
-    print(f"=== {k} ===") 
-    for fld, frep in rep.fld_report.items(): 
-        print(fld, [ (a,len(s)) for a, s in frep.results.items()]) 
-    print()
+# for k, rep in sim.report.items():
+#     print(f"=== {k} ===") 
+#     for fld, frep in rep.fld_report.items(): 
+#         print(fld, [ (a,len(s)) for a, s in frep.results.items()]) 
+#     print()
 
 # ---------------------------------------------------------------------------
 # Inspect results
@@ -105,20 +106,13 @@ print("=== Region ===")
 print(results[Region].head())
 print(results[Region].shape)
 
-
 print("=== Customer ===")
 print(results[Customer].head())
 print(results[Customer].shape)
 
-
 print("=== Transaction ===")
 print(results[Transaction].head())
 print(results[Transaction].shape)
-dup = results[Transaction].duplicated(subset=['ref'], keep=False)
-print(any(dup))
-print(results[Transaction][dup].sort_values(by=['ref']))
 
-print(f"Null amounts: {results[Transaction]['amount_nulls'].isna().sum()}")
+# print(f"Null amounts: {results[Transaction]['amount_nulls'].isna().sum()}")
 #print(f"Duplicate refs: {results[Transaction]['ref_dupes'].duplicated().sum()}")
-
-
