@@ -74,6 +74,7 @@ class EntityContext:
     col = self.entity.get_primary_key_field().name
     return pd.concat([self.preexisting, self.generated])[col] 
 
+
   def get_creationtime_values(self) -> pd.Series:
     col = self.entity.get_primary_time_field().name
     return pd.concat([self.preexisting, self.generated])[col]
@@ -84,4 +85,6 @@ class EntityContext:
     selection = [ fld.name for fld in flds if fld.name in list(df.columns) ] or list(df.columns) 
     return df[selection]
 
+  
+  
   
