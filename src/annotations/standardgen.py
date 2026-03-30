@@ -163,10 +163,10 @@ class GenGamma(GenNum):
     skewness: float = 1.0
     scale: float = 1.0
     
-    def generate(self, N: int) -> pd.Series:
+    def generate(self, ctx: GenCtx) -> pd.Series:
         rng = np.random.default_rng(self.seed)
         shape = (2 / self.skewness) ** 2
-        res = pd.Series(rng.gamma(shape=shape, scale=self.scale, size=N))
+        res = pd.Series(rng.gamma(shape=shape, scale=self.scale, size=ctx.N))
         return self.clip(self.apply_rounding(res))
 
 
@@ -174,9 +174,9 @@ class GenGamma(GenNum):
 class GenPoisson(GenNum):
     mean: float = 1.0
     
-    def generate(self, N: int) -> pd.Series:
+    def generate(self, ctx: GenCtx) -> pd.Series:
         rng = np.random.default_rng(self.seed)
-        res = pd.Series(rng.poisson(lam=self.mean, size=N))
+        res = pd.Series(rng.poisson(lam=self.mean, size=ctx.N))
         return self.clip(self.apply_rounding(res))
 
 
@@ -184,9 +184,8 @@ class GenPoisson(GenNum):
 class GenExponential(GenNum):
     scale: float = 1.0
 
-    def generate(self, N: int) -> pd.Series:
+    def generate(self, ctx: GenCtx) -> pd.Series:
         rng = np.random.default_rng(self.seed)
-        res = pd.Series(rng.exponential(scale=self.scale, size=N))
+        res = pd.Series(rng.exponential(scale=self.scale, size=ctx.N))
         return self.clip(self.apply_rounding(res))
-
 
