@@ -39,7 +39,7 @@ class FullEntity(Entity):
                 )]
     score:      Annotated[float,            GenNormal(mean=50, std=10)]
     label:      Annotated[str,              GenFaker("name"), Unique()]
-    amount:     Annotated[float,            GenUniform(min=0, max=100), Nullify(rate=0.05)]
+    amount:     Annotated[float,            GenUniform(min=0, max=100), Nullify(prob=0.05)]
 
 
 @dataclass

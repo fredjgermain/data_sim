@@ -15,8 +15,8 @@ from src.annotations.standardgen import (
     GenNormal, GenUniform, GenFaker, GenPattern, CustomGen, GenCategorical, GenGamma, GenPoisson, Transformer, IStandardGen
 ) 
 from src.annotations.primaries import (PrimaryKey, CreationTime, ForeignKey) 
-from src.annotations.fault import Nullify, Duplicate, Scramble, MissingWord
-from src.utils import missing_elements
+from src.annotations.fault import Nullify, Duplicate, Misspell, MissingWord
+from src.utils.utils import missing_elements
 
 
 
@@ -71,8 +71,8 @@ class Student(Entity):
   student_id:     Annotated[int, PrimaryKey()] 
   name:           Annotated[str, GenFaker('name')] 
   teacher_id:     Annotated[int, ForeignKey(Teacher)] 
-  teacher_name:   Annotated[str, FromForeignKey('teacher_id', 'name'), Scramble(0.05)] 
-  school_name:    Annotated[str, FromForeignKey('teacher_id', 'school_name'), Scramble(0.05), MissingWord(0.05)] 
+  teacher_name:   Annotated[str, FromForeignKey('teacher_id', 'name'), Misspell(0.05)] 
+  school_name:    Annotated[str, FromForeignKey('teacher_id', 'school_name'), Misspell(0.05), MissingWord(0.05)] 
 
 
 entities = {

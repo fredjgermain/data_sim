@@ -31,8 +31,8 @@ _pk        = PrimaryKey()
 _gen       = GenNormal(mean=50, std=10)
 _uniform   = GenUniform(min=0, max=10)
 _unique    = Unique()
-_nullify_1 = Nullify(rate=0.1)
-_nullify_2 = Nullify(rate=0.2)
+_nullify_1 = Nullify(prob=0.1)
+_nullify_2 = Nullify(prob=0.2)
 
 
 # ---------------------------------------------------------------------------

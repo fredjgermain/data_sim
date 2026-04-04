@@ -8,7 +8,8 @@ from src.interface import IAnnotation, IEntity
 
 
 
-class IGen(IAnnotation):
+class IGen(IAnnotation): 
+    seed: int | None = None 
 
     def generate(self, ctx:GenCtx) -> pd.Series:
       raise NotImplementedError

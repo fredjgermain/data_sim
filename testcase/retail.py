@@ -58,12 +58,12 @@ class Transaction(Entity):
                         end=datetime.datetime(2024, 12, 31),
                     )]
     customer_id:    Annotated[int,   ForeignKey(Customer)]
-    region_id:      Annotated[int,   ForeignKey(Region), Nullify(rate=0.1)]
+    region_id:      Annotated[int,   ForeignKey(Region), Nullify(prob=0.1)]
     amount:         Annotated[float, GenNormal(min=0, mean=150, std=80, rounding=2)]
     quantity:       Annotated[int,   GenUniform(min=1, max=10, rounding=0)]
-    ref:            Annotated[str,   GenPattern(r'TXN-\d{8}'), Unique(), Duplicate(rate=0.1)]
+    ref:            Annotated[str,   GenPattern(r'TXN-\d{8}'), Unique(), Duplicate(prob=0.1)]
     # fault injections
-    amount_nulls:   Annotated[float, GenNormal(min=0, mean=150, std=80, rounding=2), Nullify(rate=0.03)]
+    amount_nulls:   Annotated[float, GenNormal(min=0, mean=150, std=80, rounding=2), Nullify(prob=0.03)]
     #ref_dupes:      Annotated[str,   Duplicate(rate=0.02)]
 
 
