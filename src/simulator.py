@@ -136,15 +136,16 @@ class DataSimulator:
     # ! Pass 5: Fault injection
     def _pass_fault_injection(self) -> None:
         for entity, ctx in self.entities.items():
-            for fld in entity.find([IFault]):
+            for fld in entity.find([IFault]): 
                 # get Standard generator annotation 
-                current_serie = ctx.get_data(preexisting=False)[fld.name] 
-                fault_ctx = FaultCtx(name=fld.name, current_serie=current_serie) 
                 for ann in fld.get_many(IFault): 
+                    current_serie = ctx.get_data(preexisting=False)[fld.name] 
+                    fault_ctx = FaultCtx(name=fld.name, current_serie=current_serie) 
                     try:
                         serie = ann.inject(fault_ctx) 
                         ctx.generated[fld.name] = serie 
                         self.update_report(entity, fld, ann, serie) 
+                        print(fld.name, ann)
                     except Exception as e: 
                         self.update_report(entity, fld, ann, error=e) 
     

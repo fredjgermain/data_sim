@@ -22,23 +22,6 @@ from src.utils.utils import missing_elements
 
 
 
-# def teacher_fetch_school_name(ctx:GenCtx) -> pd.Series: 
-#   cdata = ctx.current_data[['school_id']] 
-#   fdata = ctx.foreign_datas[School][['school_id', 'name']] 
-#   return pd.merge(cdata, fdata, left_on='school_id', right_on='school_id', how='left')['name'] 
-
-# def student_fetch_teacher_name(ctx:GenCtx) -> pd.Series: 
-#   cdata = ctx.current_data[['teacher_id']] 
-#   fdata = ctx.foreign_datas[Teacher][['teacher_id', 'name']] 
-#   return pd.merge(cdata, fdata, left_on='teacher_id', right_on='teacher_id', how='left')['name'] 
-
-# def student_fetch_school_name(ctx:GenCtx) -> pd.Series: 
-#   cdata = ctx.current_data[['teacher_id']] 
-#   fdata = ctx.foreign_datas[Teacher][['teacher_id', 'school_name']] 
-#   return pd.merge(cdata, fdata, left_on='teacher_id', right_on='teacher_id', how='left')['school_name'] 
-
-
-
 @dataclass 
 class School(Entity): 
   school_id:      Annotated[int, PrimaryKey()] 
@@ -58,8 +41,8 @@ class Student(Entity):
   student_id:     Annotated[int, PrimaryKey()] 
   name:           Annotated[str, GenFaker('name')] 
   teacher_id:     Annotated[int, ForeignKey(Teacher)] 
-  teacher_name:   Annotated[str, FromForeignKey('teacher_id', 'name'), Misspell(0.05)] 
-  school_name:    Annotated[str, FromForeignKey('teacher_id', 'school_name'), Misspell(0.05), MissingWord(0.05)] 
+  teacher_name:   Annotated[str, FromForeignKey('teacher_id', 'name'), Misspell(0.03)] 
+  school_name:    Annotated[str, FromForeignKey('teacher_id', 'school_name'), MissingWord(0.1), Misspell(0.03)]  # , 
 
 
 entities = {
@@ -73,10 +56,6 @@ entities = {
 # Simulation ---------------
 sim = DataSimulator(entities) 
 results = sim.simulate() 
-
-# for e, rep in sim.report.items():
-#   for k,v in rep.fld_report.items():
-#     print(k,v.error)
 
 for e in entities.keys(): 
   print(results[e].head()) 

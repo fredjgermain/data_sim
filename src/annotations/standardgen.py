@@ -20,11 +20,11 @@ class GenCtx:
   
   
   # ! helper function for CustomGen
-  def from_foreign(self, foreignkey:str, foreignfields:list[str]) -> pd.DataFrame: 
+  def from_foreign(self, foreignkey:str, foreignfields:list[str]) -> pd.DataFrame:       
     target = self.entity.get(foreignkey)[ForeignKey].target 
     target_pk = target.find(PrimaryKey) 
     cdata = self.current_data[[foreignkey]] 
-    fdata = self.foreign_datas[target][[target_pk.name, *foreignfields]] 
+    fdata = self.foreign_datas[target][[foreignkey, *foreignfields]] 
     return pd.merge(cdata, fdata, left_on=foreignkey, right_on=target_pk.name, how='left') 
 
 
@@ -44,11 +44,7 @@ class FromForeignKey(IGen):
   foreignfield: str 
   
   def generate(self, ctx:GenCtx) -> pd.Series: 
-    target = ctx.entity.get(self.foreignkey)[ForeignKey].target 
-    target_pk = target.get_primary_key_field() 
-    cdata = ctx.current_data[[self.foreignkey]] 
-    fdata = ctx.foreign_datas[target][[target_pk.name, self.foreignfield]] 
-    merged = pd.merge(cdata, fdata, left_on=self.foreignkey, right_on=target_pk.name, how='left') 
+    merged = ctx.from_foreign(self.foreignkey, [self.foreignfield]) 
     return merged[self.foreignfield] 
 
 
