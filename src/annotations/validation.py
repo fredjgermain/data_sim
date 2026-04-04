@@ -1,7 +1,28 @@
 import pandas as pd
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from src.annotations.base import ValidCtx, IValid, ValidationReport
+from src.interface import IAnnotation
+
+
+
+@dataclass
+class ValidCtx:
+    name:str
+    current_serie: pd.Series = field(default_factory=pd.Series)
+
+
+@dataclass
+class ValidationReport:
+    validation_name: str
+    field_name:str # Field name 
+    success:bool
+    invalid_values: pd.Series
+
+
+class IValid(IAnnotation):
+
+    def validate(self, ctx:ValidCtx) -> ValidationReport:
+        raise NotImplementedError
 
 
 

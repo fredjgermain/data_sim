@@ -1,17 +1,59 @@
 import pandas as pd
 import rstr
 import faker
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable
 import datetime
 
-from src.annotations.base import GenCtx, IStandardGen, IAnnotation
-from src.utils import generator
-
+from src.interface import IEntity, IAnnotation 
+from src.annotations.primaries import ForeignKey, PrimaryKey
+from src.utils import generator 
 
 
 @dataclass
-class GenNum(IStandardGen): 
+class GenCtx: 
+  name:str 
+  N:int 
+  entity:type[IEntity] 
+  current_data:pd.DataFrame = field(default_factory=pd.DataFrame) 
+  foreign_datas:dict[type[IEntity], pd.DataFrame] = field(default_factory=dict) 
+  
+  
+  # ! helper function for CustomGen
+  def from_foreign(self, foreignkey:str, foreignfields:list[str]) -> pd.DataFrame: 
+    target = self.entity.get(foreignkey)[ForeignKey].target 
+    target_pk = target.find(PrimaryKey) 
+    cdata = self.current_data[[foreignkey]] 
+    fdata = self.foreign_datas[target][[target_pk.name, *foreignfields]] 
+    return pd.merge(cdata, fdata, left_on=foreignkey, right_on=target_pk.name, how='left') 
+
+
+
+class IGen(IAnnotation):
+    seed: int | None = None
+
+    def generate(self, ctx:GenCtx) -> pd.Series:
+      raise NotImplementedError
+
+
+
+
+@dataclass 
+class FromForeignKey(IGen): 
+  foreignkey:str 
+  foreignfield: str 
+  
+  def generate(self, ctx:GenCtx) -> pd.Series: 
+    target = ctx.entity.get(self.foreignkey)[ForeignKey].target 
+    target_pk = target.get_primary_key_field() 
+    cdata = ctx.current_data[[self.foreignkey]] 
+    fdata = ctx.foreign_datas[target][[target_pk.name, self.foreignfield]] 
+    merged = pd.merge(cdata, fdata, left_on=self.foreignkey, right_on=target_pk.name, how='left') 
+    return merged[self.foreignfield] 
+
+
+@dataclass
+class GenNum(IGen): 
     min: float | None = None 
     max: float | None = None 
     seed: int | None = None 
@@ -88,7 +130,7 @@ class GenExponential(GenNum):
 
 
 @dataclass 
-class GenDate(IStandardGen):
+class GenDate(IGen):
     start: datetime.datetime
     end: datetime.datetime
     
@@ -99,7 +141,7 @@ class GenDate(IStandardGen):
 
 
 @dataclass 
-class GenTime(IStandardGen):
+class GenTime(IGen):
     start: datetime.datetime
     end: datetime.datetime
     
@@ -110,7 +152,7 @@ class GenTime(IStandardGen):
     
 
 @dataclass
-class GenCategorical(IStandardGen):
+class GenCategorical(IGen):
     categories: list
     weight: list | None = None 
     
@@ -120,7 +162,7 @@ class GenCategorical(IStandardGen):
 
 
 @dataclass
-class CustomGen(IStandardGen):
+class CustomGen(IGen):
     fn: Callable[[GenCtx], pd.Series]
     """User-supplied function: (partial_df: DataFrame) -> Series."""
     
@@ -129,7 +171,7 @@ class CustomGen(IStandardGen):
 
 
 @dataclass
-class GenFaker(IStandardGen):
+class GenFaker(IGen):
     provider: str
 
     def generate(self, ctx: GenCtx) -> pd.Series:
@@ -143,7 +185,7 @@ class GenFaker(IStandardGen):
 
 
 @dataclass
-class GenPattern(IStandardGen):
+class GenPattern(IGen):
     pattern: str
 
     def generate(self, ctx: GenCtx) -> pd.Series:

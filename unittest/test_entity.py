@@ -20,10 +20,10 @@ from dataclasses import dataclass
 
 from src.entity import Entity, EntityField
 from src.annotations.primaries import PrimaryKey, CreationTime
-from src.annotations.standardgen import GenNormal, GenUniform, GenFaker
+from src.annotations.standardgen import GenNormal, GenUniform, GenFaker, IGen, IGen
 from src.annotations.validation import Unique
 from src.annotations.fault import Nullify
-from src.annotations.base import IStandardGen, IFault, IGen
+from src.annotations.fault import IFault
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +147,7 @@ class TestFind:
         (FullEntity,         [PrimaryKey],        {"id"}),
         (FullEntity,         [CreationTime],      {"created_at"}),
         # By parent annotation type
-        (FullEntity,         [IStandardGen],      {"score", "label", "amount"}),
+        (FullEntity,         [IGen],      {"score", "label", "amount"}),
         (FullEntity,         [IFault],            {"amount"}),
         # Mixed name and type
         (FullEntity,         ["id", GenNormal],   {"id", "score"}),
@@ -174,13 +174,13 @@ class TestSelect:
         (FullEntity, None,             None,          {"id", "created_at", "score", "label", "amount"}),
         # Inclusion only
         (FullEntity, ["id", "score"],  None,          {"id", "score"}),
-        (FullEntity, [IStandardGen],   None,          {"score", "label", "amount"}),
+        (FullEntity, [IGen],   None,          {"score", "label", "amount"}),
         # Exclusion only
         (FullEntity, None,             ["id"],        {"created_at", "score", "label", "amount"}),
         (FullEntity, None,             [PrimaryKey],  {"created_at", "score", "label", "amount"}),
         # Inclusion + exclusion combined
         (FullEntity, ["id", "score"],  ["score"],     {"id"}),
-        (FullEntity, [IStandardGen],   [Unique],      {"score", "amount"}),
+        (FullEntity, [IGen],   [Unique],      {"score", "amount"}),
         # Exclusion of all
         (PlainTypeEntity, None,        ["id", "score"], set()),
         # Empty entity

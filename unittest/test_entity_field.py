@@ -12,10 +12,10 @@ Covered methods:
 import pytest
 from src.entity import EntityField
 from src.annotations.primaries import PrimaryKey
-from src.annotations.standardgen import GenNormal, GenUniform
+from src.annotations.standardgen import GenNormal, GenUniform, IGen, IGen
 from src.annotations.validation import Unique
 from src.annotations.fault import Nullify
-from src.annotations.base import IStandardGen, IFault, IGen
+from src.annotations.fault import IFault
 
 
 # ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ class TestGet:
         ({PrimaryKey: _pk},                  PrimaryKey,   _pk),
         ({GenNormal:  _gen},                 GenNormal,    _gen),
         # Parent type match (subclass resolution)
-        ({GenNormal:  _gen},                 IStandardGen, _gen),
+        ({GenNormal:  _gen},                 IGen, _gen),
         ({PrimaryKey: _pk},                  IGen,         _pk),
         # Multiple annotations — correct one returned
         ({PrimaryKey: _pk, GenNormal: _gen}, PrimaryKey,   _pk),
@@ -71,9 +71,9 @@ class TestGetMany:
         # Two fault annotations stored under different keys — both returned
         ({"n1": _nullify_1, "n2": _nullify_2},                      IFault,       2, [_nullify_1, _nullify_2]),
         # Mixed annotations — only IStandardGen instances returned
-        ({GenNormal: _gen, GenUniform: _uniform, PrimaryKey: _pk},  IStandardGen, 2, [_gen, _uniform]),
+        ({GenNormal: _gen, GenUniform: _uniform, PrimaryKey: _pk},  IGen, 2, [_gen, _uniform]),
         # Single match
-        ({GenNormal: _gen},                                          IStandardGen, 1, [_gen]),
+        ({GenNormal: _gen},                                          IGen, 1, [_gen]),
         # No match
         ({PrimaryKey: _pk},                                          IFault,       0, []),
         # Empty annotations
@@ -98,7 +98,7 @@ class TestHas:
         ({PrimaryKey: _pk},                  (PrimaryKey,),        True),
         # Parent type present
         ({PrimaryKey: _pk},                  (IGen,),              True),
-        ({GenNormal:  _gen},                 (IStandardGen,),      True),
+        ({GenNormal:  _gen},                 (IGen,),      True),
         # Absent annotation
         ({PrimaryKey: _pk},                  (Unique,),            False),
         # Empty annotations

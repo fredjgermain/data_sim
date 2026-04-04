@@ -3,12 +3,15 @@ from dataclasses import dataclass, field
 import datetime
 
 from src.interface import IAnnotation 
-from src.annotations.base import GenCtx, IStandardGen, FaultCtx , IFault, IValid, ValidCtx 
-from src.annotations.primaries import PrimaryKey, CreationTime, ForeignKey 
-from src.annotations.standardgen import Transformer
+from src.annotations.primaries import PrimaryKey, ForeignKey, CreationTime
+from src.annotations.standardgen import IGen, GenCtx, Transformer 
+from src.annotations.fault import IFault, FaultCtx 
+from src.annotations.validation import IValid, ValidCtx 
 
 from src.context import EntityContext 
 from src.entity import Entity, EntityField 
+
+
 
 @dataclass 
 class EntityReport: 
@@ -61,14 +64,14 @@ class DataSimulator:
         return {entity: ctx.get_data() for entity, ctx in self.entities.items()}
 
     # ! Pass 1 
-    def _pass_primary_keys(self) -> None:
-        for entity, ctx in self.entities.items():
-            pk_fld = entity.get_primary_key_field()            
-            if pk_fld is None:
-                continue
+    def _pass_primary_keys(self) -> None: 
+        for entity, ctx in self.entities.items(): 
+            pk_fld = entity.get_primary_key_field() 
+            if pk_fld is None: 
+                continue 
+            ann = pk_fld.get(PrimaryKey) 
             current_data= ctx.get_data(generated=False) 
             gen_ctx = GenCtx(name=pk_fld.name, entity=entity, N=ctx.N, current_data=current_data) 
-            ann = pk_fld.get(PrimaryKey) 
             try:
                 serie = ann.generate(gen_ctx) 
                 ctx.generated[pk_fld.name] = self._coerce_column(serie, pk_fld.base_type) 
@@ -84,7 +87,6 @@ class DataSimulator:
                 #target = ann.target 
                 foreign_datas = { e:c.get_data() for e, c in self.entities.items() } 
                 gen_ctx = GenCtx(name=fld.name, entity=entity, N=ctx.N, foreign_datas=foreign_datas) 
-                
                 try:
                     serie = ann.generate(gen_ctx) 
                     ctx.generated[fld.name] = self._coerce_column(serie, fld.base_type) 
@@ -99,10 +101,10 @@ class DataSimulator:
             if ct_fld is None:
                 continue
             
+            ann = ct_fld.get(CreationTime) 
             # ! Aggregate creation time to find lower bound 
             df_agg_ct = self._aggregate_creation_time(ctx) 
             gen_ctx = GenCtx(name=ct_fld.name, entity=entity, N=ctx.N, current_data=df_agg_ct) 
-            ann = ct_fld.get(CreationTime) 
             try:
                 serie = ann.generate(gen_ctx) 
                 ctx.generated[ct_fld.name] = self._coerce_column(serie, ct_fld.base_type) 
@@ -111,14 +113,14 @@ class DataSimulator:
                 self.update_report(entity, ct_fld, ann, error=e) 
 
 
-    # ! pass 4
-    def _pass_standard_generation(self) -> None:
-        for entity, ctx in self.entities.items():
-            for fld in entity.select([IStandardGen]):
+    # ! pass 4 
+    def _pass_standard_generation(self) -> None: 
+        for entity, ctx in self.entities.items(): 
+            for fld in entity.select([IGen]): 
                 current_data = ctx.get_data(preexisting=False) 
                 foreign_data = { e:c.get_data() for e, c in self.entities.items() } 
                 gen_ctx = GenCtx(name=fld.name, N=ctx.N, entity=entity, current_data=current_data, foreign_datas=foreign_data) 
-                ann_gen = fld.get(IStandardGen) 
+                ann_gen = fld.get(IGen) 
                 ann_trf = fld.get(Transformer) 
                 
                 try:
@@ -144,14 +146,13 @@ class DataSimulator:
                         ctx.generated[fld.name] = serie 
                         self.update_report(entity, fld, ann, serie) 
                     except Exception as e: 
-                        print(e)
                         self.update_report(entity, fld, ann, error=e) 
     
     # ! Pass 6: Validation 
     def _pass_validation(self) -> None: 
         for entity, ctx in self.entities.items(): 
             for fld in entity.find([IValid]): 
-                current_data = ctx.get_data(preexisting=False)[fld.name] 
+                current_data = ctx.get_data(preexisting=False)[fld.name]
                 valid_ctx = ValidCtx(name=fld.name, current_serie=current_data) 
                 for ann in fld.get_many(IValid): 
                     try:

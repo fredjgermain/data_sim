@@ -9,11 +9,10 @@ DataSimulator reason about user-defined entity dataclasses at runtime.
 from typing import Annotated, get_args, get_origin, overload
 
 from dataclasses import dataclass
-from src.annotations.base import IAnnotation
 from src.annotations.primaries import PrimaryKey, CreationTime 
-from src.interface import IEntity, IEntityField 
+from src.interface import IEntity, IEntityField, IAnnotation 
 
-def __getitem__[A](self, annotation_type: type[A] | list[type[A]]) -> A | None | list[A]: ...
+
 
 # ---------------------------------------------------------------------------
 # EntityField

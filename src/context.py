@@ -56,8 +56,6 @@ class EntityContext(IEntityContext):
             return pd.Series(dtype=object) 
         return df[fld.name] 
 
-
-
     def get_data( self,
         include: list[str | type] | None = None, 
         exclude: list[str | type] | None = None, 

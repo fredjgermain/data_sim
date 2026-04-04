@@ -1,9 +1,21 @@
 import pandas as pd
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Any, Literal
 
-from src.annotations.base import FaultCtx, IFault 
+from src.interface import IAnnotation
 from src.utils import fault
+
+
+@dataclass
+class FaultCtx:
+    name:str
+    current_serie: pd.Series = field(default_factory=pd.Series)
+
+
+class IFault(IAnnotation):
+
+    def inject(self, ctx:FaultCtx) -> pd.Series:
+        raise NotImplementedError
 
 
 
@@ -32,6 +44,8 @@ class Misspell(IFault):
     seed: int | None = None
     
     def inject(self, ctx: FaultCtx) -> pd.Series: 
+        #print(ctx.current_serie) 
+        
         return fault.inject_misspellings(ctx.current_serie, self.seed, self.prob) 
 
 @dataclass

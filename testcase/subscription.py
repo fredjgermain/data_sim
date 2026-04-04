@@ -11,7 +11,7 @@ from src.context import EntityContext
 from src.simulator import DataSimulator
 
 
-from src.annotations.base import GenCtx
+from src.annotations.standardgen import GenCtx
 from src.annotations.standardgen import (
     GenNormal, GenUniform, GenFaker, GenPattern, CustomGen, GenCategorical, GenGamma, GenPoisson
 )

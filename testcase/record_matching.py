@@ -10,13 +10,15 @@ from src.entity import Entity
 from src.context import EntityContext
 from src.simulator import DataSimulator
 
-from src.annotations.base import GenCtx
+from src.annotations.standardgen import GenCtx, IGen
 from src.annotations.standardgen import (
-    GenNormal, GenUniform, GenFaker, GenPattern, CustomGen, GenCategorical, GenGamma, GenPoisson, Transformer, IStandardGen
+    GenNormal, GenUniform, GenFaker, GenPattern, 
+    CustomGen, GenCategorical, GenGamma, GenPoisson, 
+    Transformer, FromForeignKey 
 ) 
 from src.annotations.primaries import (PrimaryKey, CreationTime, ForeignKey) 
-from src.annotations.fault import Nullify, Duplicate, Misspell, MissingWord
-from src.utils.utils import missing_elements
+from src.annotations.fault import Nullify, Duplicate, Misspell, MissingWord 
+from src.utils.utils import missing_elements 
 
 
 
@@ -34,21 +36,6 @@ from src.utils.utils import missing_elements
 #   cdata = ctx.current_data[['teacher_id']] 
 #   fdata = ctx.foreign_datas[Teacher][['teacher_id', 'school_name']] 
 #   return pd.merge(cdata, fdata, left_on='teacher_id', right_on='teacher_id', how='left')['school_name'] 
-
-
-
-@dataclass 
-class FromForeignKey(IStandardGen): 
-  foreignkey:str 
-  foreignfield: str 
-  
-  def generate(self, ctx:GenCtx) -> pd.Series: 
-    target = ctx.entity.get(self.foreignkey)[ForeignKey].target 
-    target_pk = target.get_primary_key_field() 
-    cdata = ctx.current_data[[self.foreignkey]] 
-    fdata = ctx.foreign_datas[target][[target_pk.name, self.foreignfield]] 
-    merged = pd.merge(cdata, fdata, left_on=self.foreignkey, right_on=target_pk.name, how='left') 
-    return merged[self.foreignfield] 
 
 
 
@@ -82,16 +69,15 @@ entities = {
 } 
 
 
+
 # Simulation ---------------
 sim = DataSimulator(entities) 
 results = sim.simulate() 
 
+# for e, rep in sim.report.items():
+#   for k,v in rep.fld_report.items():
+#     print(k,v.error)
+
 for e in entities.keys(): 
   print(results[e].head()) 
-
-
-fld = School.find(PrimaryKey) # intelisence says: (variable) fld: IEntityField | None
-
-ann = fld[PrimaryKey]
-print(ann)
 

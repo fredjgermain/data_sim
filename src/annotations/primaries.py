@@ -9,23 +9,32 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 
-from src.annotations.base import IGen, GenCtx
-from src.interface import IEntity
+#from src.annotations.standardgen import IGen
+#from src.annotations.standardgen import GenCtx
+from src.interface import IEntity, IAnnotation
 
+
+@dataclass 
+class PkCtx:
+    name:str 
+    N:int 
+    entity:type[IEntity] 
+    current_data:pd.DataFrame = field(default_factory=pd.DataFrame) 
+    
 
 
 @dataclass
-class PrimaryKey(IGen):
+class PrimaryKey(IAnnotation):
     fn: Callable[[pd.DataFrame], pd.Series] | None = None
 
-    def generate(self, ctx:GenCtx) -> pd.Series:
+    def generate(self, ctx:PkCtx) -> pd.Series:
         if self.fn:
             return self.fn(ctx)
         return self._generate_sequential(ctx) # Default primarykey generator. 
 
 
     # default generation method 
-    def _generate_sequential(self, ctx:GenCtx) -> pd.Series:
+    def _generate_sequential(self, ctx:PkCtx) -> pd.Series:
         if ctx.current_data.empty:
             start = 1
         else:
@@ -38,11 +47,20 @@ class PrimaryKey(IGen):
 # ForeignKey
 # ---------------------------------------------------------------------------
 
+
 @dataclass
-class ForeignKey(IGen):
+class FkCtx: 
+  name:str 
+  N:int 
+  entity:type[IEntity] 
+  foreign_datas:dict[type[IEntity], pd.DataFrame] = field(default_factory=dict) 
+  
+
+@dataclass
+class ForeignKey(IAnnotation):
     target: type[IEntity]
 
-    def generate(self, ctx: GenCtx) -> pd.Series: 
+    def generate(self, ctx: FkCtx) -> pd.Series: 
         target_data = ctx.foreign_datas.get(self.target) 
         target_pk_fld = self.target.get_primary_key_field() 
         if target_data is None or target_data.empty or target_pk_fld is None: 
@@ -58,7 +76,15 @@ class ForeignKey(IGen):
 # ---------------------------------------------------------------------------
 
 @dataclass
-class CreationTime(IGen):
+class CtCtx: 
+  name:str 
+  N:int 
+  entity:type[IEntity] 
+  current_data:pd.DataFrame = field(default_factory=pd.DataFrame) 
+  
+
+@dataclass
+class CreationTime(IAnnotation):
     start: datetime.datetime
     """Earliest possible timestamp (inclusive)."""
 
@@ -66,7 +92,7 @@ class CreationTime(IGen):
     """Latest possible timestamp (inclusive)."""
 
 
-    def generate(self, ctx: GenCtx) -> pd.Series: 
+    def generate(self, ctx: CtCtx) -> pd.Series: 
         df_start = ctx.current_data.copy() 
         df_start['start'] = [self.start] * ctx.N # ! careful with dimensions. 
         start_date = df_start.max(axis=1) 
