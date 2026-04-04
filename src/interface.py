@@ -1,6 +1,6 @@
 import pandas as pd
+from typing import Protocol, overload
 from typing import Protocol
-
 
 
 
@@ -12,6 +12,13 @@ class IEntityField(Protocol):
     name:        str
     base_type:   type
     annotations: dict[type[IAnnotation], IAnnotation]
+    
+    @overload
+    def __getitem__[A](self, annotation_type: type[A]) -> A | None: ...
+    @overload
+    def __getitem__[A](self, annotation_type: list[type[A]]) -> list[A]: ...
+    def __getitem__[A](self, annotation_type: type[A] | list[type[A]]) -> A | None | list[A]: ...
+
 
     def get[A](self, annotation_type: type[A]) -> A | None: ...
     
@@ -27,13 +34,24 @@ class IEntityField(Protocol):
 class IEntity(Protocol):
 
     @classmethod
+    @overload
+    def find(cls, selection: str | type) -> IEntityField | None: ...
+    @classmethod
+    @overload
+    def find(cls, selection: list[str | type]) -> list[IEntityField]: ...
+
+    @classmethod
+    def find(cls, selection): ...
+
+
+    @classmethod
     def inspect(cls) -> dict[str, IEntityField]: ... 
 
     @classmethod
     def get(cls, selection:str | type) -> IEntityField: ...
         
-    @classmethod
-    def find(cls, selection: list[str | type]) -> list[IEntityField]: ...
+    # @classmethod
+    # def find(cls, selection: list[str | type]) -> list[IEntityField]: ...
     
     @classmethod
     def select(

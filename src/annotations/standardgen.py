@@ -9,30 +9,126 @@ import rstr
 import faker
 from dataclasses import dataclass
 from typing import Callable
-
+import datetime
 
 import pandas as pd
 from scipy.stats import skewnorm
 
-from src.annotations.base import GenCtx, IStandardGen, IGen
+from src.interface import IEntity
+from src.annotations.base import GenCtx, IStandardGen, IAnnotation
+
+
+
+# ! transforms serie after generation 
+@dataclass 
+class Transformer(IAnnotation):
+    fn: Callable[[pd.Series], pd.Series]
+    
+    def transform(self, series:pd.Series) -> pd.Series: 
+        return self.fn(series)
+
+
+
+@dataclass 
+class GenContextor(IAnnotation): 
+    # ! get values from current entity 
+    to_agg: dict[type[IEntity], list[str]] 
+    
+    def aggregate(self, ctx:GenCtx) -> dict[type[IEntity], pd.DataFrame]: 
+        res = {} 
+        for ent, cols in self.to_agg.items(): 
+            res[ent] = ctx.foreign_datas[ent][cols] 
+        return res 
+
+
+
+@dataclass 
+class FromField(IAnnotation): 
+    foreignkey: dict # {foreignkey_name:[foreign_fields]} 
+    
+    # ! Custom Function test 
+    def generate(self, ctx:GenCtx) -> pd.Series: 
+        cdata = ctx.current_data.copy() 
+        fdata = list(ctx.foreign_datas.values())[0] 
+        left_on, right_on = '', '' 
+        merged = pd.merge(cdata, fdata, left_on=left_on, right_on=right_on, how='left') 
+        # make your calculation here
+        return pd.Series()
+        
+        
+
+    # def aggregate(self, current:pd.DataFrame, entity:type[IEntity], entities:dict[type[IEntity], pd.DataFrame]): 
+    #     df = current.copy() 
+    #     flds = [fld for fld in entity.find([ForeignKey]) if fld.name in self.foreignkey] 
+    #     for fld in flds: 
+    #         ann = fld.get(ForeignKey) 
+    #         target = ann.target 
+    #         fdata = entities[target][self.foreignkey[fld.name]] 
+            
+
+    # 
+    # def aggregate(self, entity:type[IEntity], entities:dict[type[IEntity], pd.DataFrame]): 
+    #     flds = [fld for fld in entity.find([ForeignKey]) if fld.name in self.foreignkey] 
+    #     datas = {} 
+    #     for fld in flds: 
+    #         ann = fld.get(ForeignKey) 
+    #         target = ann.target 
+    #          = entities[target][self.foreignkey[fld.name]] 
+
+        #for fk, cols in self.foreignkey.items():
+        
+        # fld = current_entity.get[self.foreignkey] 
+        # ann = fk_fld.get(ForeignKey) 
+        # ent = ann.target 
+        # foreign_data 
+        # target_fld 
+        # merge(current, foreign_data, left_on=, right_on=, how='left') 
+        # foreign data on current[self.foreignkey] 
+        
+        
+        # left_on, right_on = self.merge_on if isinstance(self.merge_on, tuple) else [self.merge_on] * 2 
+        
+        # fdata = ctx.foreign_datas[self.target].copy() # test empty or None 
+        # cdata = ctx.current_data.copy() # test empty or None 
+        
+        # fdata = fdata[[right_on, self.field]] 
+        # cdata = cdata[[left_on]] 
+        # merged = pd.merge(cdata, fdata, left_on=left_on, right_on=right_on, how='left') 
+        # return merged[self.field] 
+
+
+@dataclass 
+class GenDate(IStandardGen):
+    start: datetime.datetime
+    """Earliest possible timestamp (inclusive)."""
+
+    end: datetime.datetime
+    """Latest possible timestamp (inclusive)."""
+    
+    def generate(self, ctx:GenCtx): 
+        start_date = pd.Series([self.start] * ctx.N) 
+        end_date = self.end 
+        ranges = (end_date - start_date).dt.days.clip(lower=0) 
+        random_days = (np.random.rand(len(start_date)) * (ranges + 1)).astype(int) 
+        return start_date + pd.to_timedelta(random_days, unit='D') 
 
 
 @dataclass
 class GenCategorical(IStandardGen):
-    encoding: dict
+    categories: list
     weight: list | None = None 
     
     def generate(self, ctx:GenCtx):
-        values = list(self.encoding.keys())
+        categories = self.categories
         weight = self.weight
         
-        if weight and len(weight) != len(values):
+        if weight and len(weight) != len(categories):
             weight = None
             raise Exception('Weights length must match encoding length or weight must be None')
         
         if self.weight:
             weight = weight / sum(weight)  # normalize to sum to 1
-        return pd.Series(np.random.choice(values, size=ctx.N, p=weight))
+        return pd.Series(np.random.choice(categories, size=ctx.N, p=weight))
 
 
 

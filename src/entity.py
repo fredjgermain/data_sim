@@ -6,13 +6,14 @@ DataSimulator reason about user-defined entity dataclasses at runtime.
 """
 
 
-from typing import Annotated, get_args, get_origin
+from typing import Annotated, get_args, get_origin, overload
 
 from dataclasses import dataclass
 from src.annotations.base import IAnnotation
 from src.annotations.primaries import PrimaryKey, CreationTime 
 from src.interface import IEntity, IEntityField 
 
+def __getitem__[A](self, annotation_type: type[A] | list[type[A]]) -> A | None | list[A]: ...
 
 # ---------------------------------------------------------------------------
 # EntityField
@@ -39,6 +40,17 @@ class EntityField(IEntityField):
     name:        str 
     base_type:   type 
     annotations: dict[type[IAnnotation], IAnnotation] 
+    
+    # INDEXER ---------------------------------------------------
+    @overload
+    def __getitem__[A](self, annotation_type: type[A]) -> A | None: ...
+    @overload
+    def __getitem__[A](self, annotation_type: list[type[A]]) -> list[A]: ...
+
+    def __getitem__(self, annotation_type):
+        if isinstance(annotation_type, list):
+            return self.get_many(annotation_type[0]) if annotation_type else []
+        return self.get(annotation_type)
     
 
     def get[A](self, annotation_type: type[A]) -> A | None:
@@ -78,6 +90,27 @@ class Entity(IEntity):
     No additional attributes are defined here — all behaviour lives in the
     IEntity classmethods and is inherited automatically.
     """
+
+    
+    @classmethod
+    @overload
+    def find(cls, selection: str | type) -> IEntityField | None: ...
+    @classmethod
+    @overload
+    def find(cls, selection: list[str | type]) -> list[IEntityField]: ...
+
+    @classmethod
+    def find(cls, selection):
+        if not isinstance(selection, list):
+            return next(iter(cls.find([selection])), None)
+
+        result = []
+        for name, fld in cls.inspect().items():
+            ann_sel = [s for s in selection if isinstance(s, type)]
+            if name in selection or (ann_sel and fld.has(*ann_sel)):
+                result.append(fld)
+        return result
+
     
     @classmethod
     def inspect(cls) -> dict[str, IEntityField]: 
@@ -103,14 +136,14 @@ class Entity(IEntity):
         return ann_dict
 
 
-    @classmethod
-    def find(cls, selection: list[str | type]) -> list[IEntityField]:
-        result = []
-        for name, fld in cls.inspect().items():
-            ann_sel = [s for s in selection if isinstance(s, type)]
-            if name in selection or (ann_sel and fld.has(*ann_sel)):
-                result.append(fld)
-        return result
+    # @classmethod
+    # def find(cls, selection: list[str | type]) -> list[IEntityField]:
+    #     result = []
+    #     for name, fld in cls.inspect().items():
+    #         ann_sel = [s for s in selection if isinstance(s, type)]
+    #         if name in selection or (ann_sel and fld.has(*ann_sel)):
+    #             result.append(fld)
+    #     return result
 
     @classmethod
     def select( cls, 

@@ -3,7 +3,8 @@ import pandas as pd
 from dataclasses import dataclass
 from typing import Callable
 
-from src.annotations.base import FaultCtx, IFault
+from src.annotations.base import FaultCtx, IFault 
+from src.utils import scramble_letters, missing_elements
 
 
 @dataclass 
@@ -28,7 +29,7 @@ class Nullify(IFault):
 
 # ! Duplicate — deliberately re-introduce duplicate values after Unique has run
 
-
+@dataclass
 class Corrupt(IFault): 
     func:Callable[[pd.Series, float], pd.Series] 
     rate: float = 0 
@@ -36,6 +37,19 @@ class Corrupt(IFault):
     def inject(self, ctx: FaultCtx) -> pd.Series:
         return self.func(ctx.current_serie, self.rate)
 
+@dataclass
+class Scramble(IFault):
+    prob:0.02
+    
+    def inject(self, ctx: FaultCtx) -> pd.Series: 
+        return [ scramble_letters(v) for v in ctx.current_serie ] 
+
+@dataclass
+class MissingWord(IFault):
+    prob:0.02
+    
+    def inject(self, ctx:FaultCtx) -> pd.Series: 
+        return [ ' '.join(missing_elements(str(v).split(), self.prob)) for v in ctx.current_serie ]
 
 
 @dataclass

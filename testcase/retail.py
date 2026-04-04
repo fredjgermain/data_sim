@@ -40,7 +40,7 @@ class Customer(Entity):
                  )]
     region_id:   Annotated[int,   ForeignKey(Region)]
     email:       Annotated[str,  GenFaker("email"), Unique()]
-    sexe:        Annotated[int,  GenCategorical(encoding={0:'male', 1:'female'})] 
+    sexe:        Annotated[int,  GenCategorical(categories=['male', 'female'])] 
     age:         Annotated[int,  GenNormal(min=18, max=90, mean=40, std=15, rounding=0)]
     code:        Annotated[str,  GenPattern(r'CUST-[A-Z]{3}-\d{4}')]
     segment:     Annotated[str,  CustomGen(

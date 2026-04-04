@@ -35,6 +35,7 @@ class IFault(IAnnotation):
 class GenCtx:
     name:str
     N:int
+    entity:type[IEntity]
     current_data:pd.DataFrame = field(default_factory=pd.DataFrame)
     foreign_datas:dict[type[IEntity], pd.DataFrame] = field(default_factory=dict)
 
