@@ -62,7 +62,7 @@ class ForeignKey(IAnnotation):
 
     def generate(self, ctx: FkCtx) -> pd.Series: 
         target_data = ctx.foreign_datas.get(self.target) 
-        target_pk_fld = self.target.get_primary_key_field() 
+        target_pk_fld = self.target.get(PrimaryKey) 
         if target_data is None or target_data.empty or target_pk_fld is None: 
             raise ValueError( 
                 f"ForeignKey target '{self.target.__name__}' has no data to sample from." 

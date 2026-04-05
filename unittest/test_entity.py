@@ -159,7 +159,7 @@ class TestFind:
         (FullEntity,         [],                  set()),
     ])
     def test_find(self, entity:type[Entity], selection, expected_names):
-        result = entity.find(selection)
+        result = entity.get(selection)
         assert {fld.name for fld in result} == expected_names
 
 

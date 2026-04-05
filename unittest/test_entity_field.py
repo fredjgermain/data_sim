@@ -11,8 +11,7 @@ Covered methods:
 
 import pytest
 from src.entity import EntityField
-from src.interface import IAnnotation
-from src.annotations.primaries import PrimaryKey, ForeignKey, CreationTime
+from src.annotations.primaries import PrimaryKey 
 from src.annotations.standardgen import GenNormal, GenUniform, IGen, IGen, Transformer
 from src.annotations.validation import Unique
 from src.annotations.fault import Nullify, IFault, Misspell
@@ -34,22 +33,6 @@ _nullify    = Nullify()
 _misspell   = Misspell() 
 _trf        = Transformer(lambda serie:serie) 
 
-
-# ---------------------------------------------------------------------------
-# Tests: Indexer()
-# ---------------------------------------------------------------------------
-
-class TestEntityFieldIndexer: 
-    @pytest.mark.parametrize("annotations, query, expected", [ 
-        ({PrimaryKey: _pk},                                                 PrimaryKey, _pk), 
-        ({PrimaryKey: _pk},                                                 CreationTime, None), 
-        ({GenNormal: _gen, Transformer:_trf, Nullify:_nullify},              [IAnnotation], [_gen, _trf, _nullify]), 
-        ({GenNormal: _gen, Transformer:_trf, Nullify:_nullify},              [IGen], [_gen]), 
-        ({GenNormal: _gen, Transformer:_trf, Nullify:_nullify},              [IFault], [_nullify]), 
-    ]) 
-    def test_indexer(self, annotations, query, expected): 
-        fld = make_field(annotations)  
-        assert fld[query] == expected 
 
 
 

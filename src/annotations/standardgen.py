@@ -20,9 +20,9 @@ class GenCtx:
   
   
   # ! helper function for CustomGen
-  def from_foreign(self, foreignkey:str, foreignfields:list[str]) -> pd.DataFrame:       
-    target = self.entity.get(foreignkey)[ForeignKey].target 
-    target_pk = target.find(PrimaryKey) 
+  def from_foreign(self, foreignkey:str, foreignfields:list[str]) -> pd.DataFrame: 
+    target = self.entity.get(foreignkey).get(ForeignKey).target 
+    target_pk = target.get(PrimaryKey) 
     cdata = self.current_data[[foreignkey]] 
     fdata = self.foreign_datas[target][[foreignkey, *foreignfields]] 
     return pd.merge(cdata, fdata, left_on=foreignkey, right_on=target_pk.name, how='left') 

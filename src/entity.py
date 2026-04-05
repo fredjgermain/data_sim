@@ -19,39 +19,10 @@ from src.interface import IEntity, IEntityField, IAnnotation
 # ---------------------------------------------------------------------------
 @dataclass
 class EntityField(IEntityField):
-    """Holds introspected metadata for a single field of an Entity subclass.
-
-    Attributes:
-        name:        The field name as declared in the dataclass.
-        base_type:   The unwrapped Python type (e.g. int, str, datetime).
-        annotations: A dict mapping each annotation type to its instance.
-                     At most one annotation of each type is allowed per field;
-                     IEntity.inspect() raises TypeError on duplicates.
-
-    Example (internal representation of ``age: Annotated[int, GenNormal(...)]``):
-        EntityField(
-            name="age",
-            base_type=int,
-            annotations={GenNormal: GenNormal(mean=45, std=20, ...)},
-        )
-    """
-
     name:        str 
     base_type:   type 
     annotations: dict[type[IAnnotation], IAnnotation] 
     
-    # INDEXER ---------------------------------------------------
-    @overload
-    def __getitem__[A](self, annotation_type: type[A]) -> A | None: ...
-    @overload
-    def __getitem__[A](self, annotation_type: list[type[A]]) -> list[A]: ...
-
-    def __getitem__(self, annotation_type):
-        if isinstance(annotation_type, list):
-            return self.get_many(annotation_type[0]) if annotation_type else []
-        return self.get(annotation_type)
-    
-
     def get[A](self, annotation_type: type[A]) -> A | None:
         result = self.annotations.get(annotation_type)
         if result is not None:
@@ -74,43 +45,7 @@ class EntityField(IEntityField):
 # Entity
 # ---------------------------------------------------------------------------
 class Entity(IEntity):
-    """Base class for all user-defined entity dataclasses.
 
-    Users inherit from this class and declare fields using Annotated types:
-
-    Example::
-
-        @dataclass
-        class Customer(Entity):
-            customer_id: Annotated[int,  PrimaryKey()]
-            email:       Annotated[str,  Unique(), Faker("email")]
-            age:         Annotated[int,  GenNormal(min=0, mean=45, std=20)]
-
-    No additional attributes are defined here — all behaviour lives in the
-    IEntity classmethods and is inherited automatically.
-    """
-
-    
-    @classmethod
-    @overload
-    def find(cls, selection: str | type) -> IEntityField | None: ...
-    @classmethod
-    @overload
-    def find(cls, selection: list[str | type]) -> list[IEntityField]: ...
-
-    @classmethod
-    def find(cls, selection):
-        if not isinstance(selection, list):
-            return next(iter(cls.find([selection])), None)
-
-        result = []
-        for name, fld in cls.inspect().items():
-            ann_sel = [s for s in selection if isinstance(s, type)]
-            if name in selection or (ann_sel and fld.has(*ann_sel)):
-                result.append(fld)
-        return result
-
-    
     @classmethod
     def inspect(cls) -> dict[str, IEntityField]: 
       fields = {}
@@ -124,7 +59,6 @@ class Entity(IEntity):
           fields[name] = EntityField(name=name, base_type=base_type, annotations=ann_dict) 
       return fields 
 
-
     @classmethod
     def _parse_annotations(cls, args) -> dict[type[IAnnotation], IAnnotation]:
         ann_dict: dict[type[IAnnotation], IAnnotation] = {}
@@ -134,39 +68,30 @@ class Entity(IEntity):
             ann_dict[type(ann)] = ann
         return ann_dict
 
-
-    # @classmethod
-    # def find(cls, selection: list[str | type]) -> list[IEntityField]:
-    #     result = []
-    #     for name, fld in cls.inspect().items():
-    #         ann_sel = [s for s in selection if isinstance(s, type)]
-    #         if name in selection or (ann_sel and fld.has(*ann_sel)):
-    #             result.append(fld)
-    #     return result
-
     @classmethod
-    def select( cls, 
-        inclusion: list[str | type] | None = None, 
-        exclusion: list[str | type] | None = None
-    ) -> list[IEntityField]:
-        
-        flds_in = cls.find(inclusion) if inclusion is not None else list(cls.inspect().values())
-        flds_ex = cls.find(exclusion) if exclusion is not None else []
-        name_ex = {fld.name for fld in flds_ex} 
-        return [fld for fld in flds_in if fld.name not in name_ex] 
+    @overload
+    def get(cls) -> list[IEntityField]: ...
+    @classmethod
+    @overload
+    def get(cls, selection: str | type) -> IEntityField | None: ...
+    @classmethod
+    @overload
+    def get(cls, selection: list[str | type]) -> list[IEntityField]: ...
     
-    @classmethod
-    def get(cls, selection:str | type) -> IEntityField:
-        return next(iter(cls.find([selection])), None)
 
     @classmethod
-    def get_primary_key_field(cls) -> IEntityField:
-        # there can be no primarykey, that is an acceptable case, but never more than one. 
-        # If there were more than one primarykey that should be caught somewhere else. 
-        return next(iter(cls.find([PrimaryKey])), None)
+    def get(cls, selection=None):
+        if selection is None:
+            return list(cls.inspect().values())       # [] → all fields
+        if not isinstance(selection, list):
+            return next(iter(cls._search([selection])), None)  # single → field or None
+        return cls._search(selection)                 # list → list of fields
 
     @classmethod
-    def get_creation_time_field(cls) -> IEntityField | None:
-        # there can be no creationtime, that is an acceptable case, but never more than one. 
-        # If there were more than one creationtime that should be caught somewhere else. 
-        return next(iter(cls.find([CreationTime])), None)
+    def _search(cls, selection: list) -> list[IEntityField]:
+        result = []
+        for name, fld in cls.inspect().items():
+            ann_sel = [s for s in selection if isinstance(s, type)]
+            if name in selection or (ann_sel and fld.has(*ann_sel)):
+                result.append(fld)
+        return result

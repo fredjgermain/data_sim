@@ -66,7 +66,7 @@ class DataSimulator:
     # ! Pass 1 
     def _pass_primary_keys(self) -> None: 
         for entity, ctx in self.entities.items(): 
-            pk_fld = entity.get_primary_key_field() 
+            pk_fld = entity.get(PrimaryKey)
             if pk_fld is None: 
                 continue 
             ann = pk_fld.get(PrimaryKey) 
@@ -82,7 +82,7 @@ class DataSimulator:
     # ! Pass 2 
     def _pass_foreign_keys(self) -> None: 
         for entity, ctx in self.entities.items(): 
-            for fld in entity.find([ForeignKey]): 
+            for fld in entity.get([ForeignKey]): 
                 ann = fld.get(ForeignKey) 
                 #target = ann.target 
                 foreign_datas = { e:c.get_data() for e, c in self.entities.items() } 
@@ -96,8 +96,8 @@ class DataSimulator:
 
     # ! Pass 3
     def _pass_creation_times(self) -> pd.Series:
-        for entity, ctx in self.entities.items():
-            ct_fld = entity.get_creation_time_field()
+        for entity, ctx in self.entities.items(): 
+            ct_fld = entity.get(CreationTime) 
             if ct_fld is None:
                 continue
             
@@ -116,7 +116,7 @@ class DataSimulator:
     # ! pass 4 
     def _pass_standard_generation(self) -> None: 
         for entity, ctx in self.entities.items(): 
-            for fld in entity.select([IGen]): 
+            for fld in entity.get([IGen]):
                 current_data = ctx.get_data(preexisting=False) 
                 foreign_data = { e:c.get_data() for e, c in self.entities.items() } 
                 gen_ctx = GenCtx(name=fld.name, N=ctx.N, entity=entity, current_data=current_data, foreign_datas=foreign_data) 
@@ -136,7 +136,7 @@ class DataSimulator:
     # ! Pass 5: Fault injection
     def _pass_fault_injection(self) -> None:
         for entity, ctx in self.entities.items():
-            for fld in entity.find([IFault]): 
+            for fld in entity.get([IFault]): 
                 # get Standard generator annotation 
                 for ann in fld.get_many(IFault): 
                     current_serie = ctx.get_data(preexisting=False)[fld.name] 
@@ -145,14 +145,13 @@ class DataSimulator:
                         serie = ann.inject(fault_ctx) 
                         ctx.generated[fld.name] = serie 
                         self.update_report(entity, fld, ann, serie) 
-                        print(fld.name, ann)
                     except Exception as e: 
                         self.update_report(entity, fld, ann, error=e) 
     
     # ! Pass 6: Validation 
     def _pass_validation(self) -> None: 
         for entity, ctx in self.entities.items(): 
-            for fld in entity.find([IValid]): 
+            for fld in entity.get([IValid]): 
                 current_data = ctx.get_data(preexisting=False)[fld.name]
                 valid_ctx = ValidCtx(name=fld.name, current_serie=current_data) 
                 for ann in fld.get_many(IValid): 
@@ -177,11 +176,11 @@ class DataSimulator:
         '''Returns a dataframe of creationtime from 0 to N columns'''
         df = current_ctx.get_data([ForeignKey], preexisting=False) 
         
-        for i, fld in enumerate(current_ctx.entity.find([ForeignKey])): 
+        for i, fld in enumerate(current_ctx.entity.get([ForeignKey])): 
             fk_ann = fld.get(ForeignKey)
             parent_ctx = self._resolve_ctx(fk_ann.target) 
-            parent_pk_fld = parent_ctx.entity.get_primary_key_field() 
-            parent_ct_fld = parent_ctx.entity.get_creation_time_field() 
+            parent_pk_fld = parent_ctx.entity.get(PrimaryKey) 
+            parent_ct_fld = parent_ctx.entity.get(CreationTime) 
             if not parent_pk_fld or not parent_ct_fld: 
                 continue 
             
