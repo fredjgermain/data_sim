@@ -22,6 +22,7 @@ class IFault(IAnnotation):
 @dataclass
 class Corrupt(IFault): 
     func:Callable[[pd.Series, Any,  float], pd.Series] 
+    
     prob: float = 0 
     seed: int | None = None 
     
@@ -40,7 +41,7 @@ class Nullify(IFault):
 
 @dataclass
 class Misspell(IFault):
-    prob:0.02
+    prob: float = 0.02
     seed: int | None = None
     
     def inject(self, ctx: FaultCtx) -> pd.Series: 
@@ -50,7 +51,7 @@ class Misspell(IFault):
 
 @dataclass
 class MissingWord(IFault):
-    prob:0.02
+    prob: float = 0.02
     seed: int | None = None
     
     def inject(self, ctx:FaultCtx) -> pd.Series: 
@@ -68,6 +69,7 @@ class Duplicate(IFault):
 @dataclass
 class Sentinel(IFault):
     sentinels: list
+    
     prob: float = 0.05
     seed: int | None = None
 

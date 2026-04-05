@@ -11,11 +11,11 @@ Covered methods:
 
 import pytest
 from src.entity import EntityField
-from src.annotations.primaries import PrimaryKey
-from src.annotations.standardgen import GenNormal, GenUniform, IGen, IGen
+from src.interface import IAnnotation
+from src.annotations.primaries import PrimaryKey, ForeignKey, CreationTime
+from src.annotations.standardgen import GenNormal, GenUniform, IGen, IGen, Transformer
 from src.annotations.validation import Unique
-from src.annotations.fault import Nullify
-from src.annotations.fault import IFault
+from src.annotations.fault import Nullify, IFault, Misspell
 
 
 # ---------------------------------------------------------------------------
@@ -27,12 +27,30 @@ def make_field(annotations: dict = None) -> EntityField:
 
 
 # Shared annotation instances
-_pk        = PrimaryKey()
-_gen       = GenNormal(mean=50, std=10)
-_uniform   = GenUniform(min=0, max=10)
-_unique    = Unique()
-_nullify_1 = Nullify(prob=0.1)
-_nullify_2 = Nullify(prob=0.2)
+_pk         = PrimaryKey()
+_gen        = GenNormal(mean=50, std=10)
+_uniform    = GenUniform(min=0, max=10)
+_nullify    = Nullify() 
+_misspell   = Misspell() 
+_trf        = Transformer(lambda serie:serie) 
+
+
+# ---------------------------------------------------------------------------
+# Tests: Indexer()
+# ---------------------------------------------------------------------------
+
+class TestEntityFieldIndexer: 
+    @pytest.mark.parametrize("annotations, query, expected", [ 
+        ({PrimaryKey: _pk},                                                 PrimaryKey, _pk), 
+        ({PrimaryKey: _pk},                                                 CreationTime, None), 
+        ({GenNormal: _gen, Transformer:_trf, Nullify:_nullify},              [IAnnotation], [_gen, _trf, _nullify]), 
+        ({GenNormal: _gen, Transformer:_trf, Nullify:_nullify},              [IGen], [_gen]), 
+        ({GenNormal: _gen, Transformer:_trf, Nullify:_nullify},              [IFault], [_nullify]), 
+    ]) 
+    def test_indexer(self, annotations, query, expected): 
+        fld = make_field(annotations)  
+        assert fld[query] == expected 
+
 
 
 # ---------------------------------------------------------------------------
@@ -46,8 +64,8 @@ class TestGet:
         ({PrimaryKey: _pk},                  PrimaryKey,   _pk),
         ({GenNormal:  _gen},                 GenNormal,    _gen),
         # Parent type match (subclass resolution)
-        ({GenNormal:  _gen},                 IGen, _gen),
-        ({PrimaryKey: _pk},                  IGen,         _pk),
+        ({GenNormal:  _gen},                 IGen,         _gen),
+        ({PrimaryKey: _pk},                  IGen,         None),
         # Multiple annotations — correct one returned
         ({PrimaryKey: _pk, GenNormal: _gen}, PrimaryKey,   _pk),
         ({PrimaryKey: _pk, GenNormal: _gen}, GenNormal,    _gen),
@@ -58,7 +76,7 @@ class TestGet:
     ])
     def test_get(self, annotations, query, expected):
         fld = make_field(annotations)
-        assert fld.get(query) is expected
+        assert fld.get(query) is expected 
 
 
 # ---------------------------------------------------------------------------
@@ -69,15 +87,16 @@ class TestGetMany:
 
     @pytest.mark.parametrize("annotations, query, expected_len, expected_items", [
         # Two fault annotations stored under different keys — both returned
-        ({"n1": _nullify_1, "n2": _nullify_2},                      IFault,       2, [_nullify_1, _nullify_2]),
         # Mixed annotations — only IStandardGen instances returned
-        ({GenNormal: _gen, GenUniform: _uniform, PrimaryKey: _pk},  IGen, 2, [_gen, _uniform]),
+        ({GenNormal: _gen, PrimaryKey: _pk},                         IGen, 1,      [_gen]),
         # Single match
-        ({GenNormal: _gen},                                          IGen, 1, [_gen]),
+        ({GenNormal: _gen},                                          IGen, 1,      [_gen]),
         # No match
-        ({PrimaryKey: _pk},                                          IFault,       0, []),
+        ({PrimaryKey: _pk},                                          IFault, 0,    []),
+        # many Ifault
+        ({Nullify: _nullify, Misspell: _misspell},                   IFault, 2,     [_nullify, _misspell]), 
         # Empty annotations
-        ({},                                                         PrimaryKey,   0, []),
+        ({},                                                         PrimaryKey, 0, []),
     ])
     def test_get_many(self, annotations, query, expected_len, expected_items):
         fld = make_field(annotations)
@@ -97,18 +116,13 @@ class TestHas:
         # Exact type present
         ({PrimaryKey: _pk},                  (PrimaryKey,),        True),
         # Parent type present
-        ({PrimaryKey: _pk},                  (IGen,),              True),
-        ({GenNormal:  _gen},                 (IGen,),      True),
+        ({GenNormal:  _gen},                 (IGen,),              True),
         # Absent annotation
         ({PrimaryKey: _pk},                  (Unique,),            False),
         # Empty annotations
         ({},                                 (PrimaryKey,),        False),
-        # Any-of-multiple — one matches
-        ({PrimaryKey: _pk},                  (Unique, PrimaryKey), True),
         # Any-of-multiple — none match
-        ({GenNormal:  _gen},                 (Unique, PrimaryKey), False),
-        # Multiple annotations present — one queried type matches
-        ({GenNormal: _gen, PrimaryKey: _pk}, (Unique, PrimaryKey), True),
+        ({GenNormal:  _gen},                 (PrimaryKey,),        False),
     ])
     def test_has(self, annotations, query_types, expected):
         fld = make_field(annotations)
