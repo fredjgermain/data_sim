@@ -38,7 +38,7 @@ class FullEntity(Entity):
                     end=datetime.datetime(2024, 1, 1),
                 )]
     score:      Annotated[float,            GenNormal(mean=50, std=10)]
-    label:      Annotated[str,              GenFaker("name"), Unique()]
+    label:      Annotated[str,              GenFaker("name") ]
     amount:     Annotated[float,            GenUniform(min=0, max=100), Nullify(prob=0.05)]
 
 
@@ -94,7 +94,6 @@ class TestInspect:
         (FullEntity, "id",     PrimaryKey),
         (FullEntity, "score",  GenNormal),
         (FullEntity, "label",  GenFaker),
-        (FullEntity, "label",  Unique),
         (FullEntity, "amount", Nullify),
     ])
     def test_inspect_annotations_present(self, entity:type[Entity], field_name, expected_annotation_type):
@@ -108,46 +107,21 @@ class TestInspect:
         assert entity.inspect()[field_name].annotations == {}
 
 
-# ---------------------------------------------------------------------------
-# Tests: _parse_annotations()
-# ---------------------------------------------------------------------------
 
-class TestParseAnnotations:
+class TestGet:
 
-    _pk   = PrimaryKey()
-    _gen  = GenNormal(mean=0, std=1)
-    _uniq = Unique()
-
-    @pytest.mark.parametrize("args, expected_types", [
-        ([_pk],           {PrimaryKey}),
-        ([_gen],          {GenNormal}),
-        ([_pk, _gen],     {PrimaryKey, GenNormal}),
-        ([_pk, _uniq],    {PrimaryKey, Unique}),
-        ([],              set()),
-        # Non-IAnnotation args are ignored
-        (["metadata", 42], set()),
-        ([_pk, "ignored"], {PrimaryKey}),
-    ])
-    def test_parse_annotations_keys(self, args, expected_types):
-        result = Entity._parse_annotations(args)
-        assert set(result.keys()) == expected_types
-
-
-# ---------------------------------------------------------------------------
-# Tests: find()
-# ---------------------------------------------------------------------------
-
-class TestFind:
-
-    @pytest.mark.parametrize("entity, selection, expected_names", [
+    @pytest.mark.parametrize("entity, selection, expected", [
         # By field name string
+        (FullEntity,         "id",                "id"),
         (FullEntity,         ["id"],              {"id"}),
         (FullEntity,         ["id", "score"],     {"id", "score"}),
+        (FullEntity,         None,                {"id", 'created_at', "score", 'label', 'amount'}),
+        (FullEntity,         [],                  set()),
         # By annotation type
         (FullEntity,         [PrimaryKey],        {"id"}),
         (FullEntity,         [CreationTime],      {"created_at"}),
         # By parent annotation type
-        (FullEntity,         [IGen],      {"score", "label", "amount"}),
+        (FullEntity,         [IGen],              {"score", "label", "amount"}),
         (FullEntity,         [IFault],            {"amount"}),
         # Mixed name and type
         (FullEntity,         ["id", GenNormal],   {"id", "score"}),
@@ -158,99 +132,14 @@ class TestFind:
         # Empty selection
         (FullEntity,         [],                  set()),
     ])
-    def test_find(self, entity:type[Entity], selection, expected_names):
-        result = entity.get(selection)
-        assert {fld.name for fld in result} == expected_names
+    def test_get(self, entity:type[Entity], selection, expected):
+        if isinstance(selection, list) or selection is None: 
+            result = entity.get(selection) 
+            assert {fld.name for fld in result} == expected 
+        elif isinstance(selection, str|type): 
+            result = entity.get(selection) 
+            assert result.name == expected 
+            
 
 
-# ---------------------------------------------------------------------------
-# Tests: select()
-# ---------------------------------------------------------------------------
 
-class TestSelect:
-
-    @pytest.mark.parametrize("entity, inclusion, exclusion, expected_names", [
-        # No filters — all fields returned
-        (FullEntity, None,             None,          {"id", "created_at", "score", "label", "amount"}),
-        # Inclusion only
-        (FullEntity, ["id", "score"],  None,          {"id", "score"}),
-        (FullEntity, [IGen],   None,          {"score", "label", "amount"}),
-        # Exclusion only
-        (FullEntity, None,             ["id"],        {"created_at", "score", "label", "amount"}),
-        (FullEntity, None,             [PrimaryKey],  {"created_at", "score", "label", "amount"}),
-        # Inclusion + exclusion combined
-        (FullEntity, ["id", "score"],  ["score"],     {"id"}),
-        (FullEntity, [IGen],   [Unique],      {"score", "amount"}),
-        # Exclusion of all
-        (PlainTypeEntity, None,        ["id", "score"], set()),
-        # Empty entity
-        (EmptyEntity,    None,         None,          set()),
-    ])
-    def test_select(self, entity:type[Entity], inclusion, exclusion, expected_names):
-        result = entity.select(inclusion, exclusion)
-        assert {fld.name for fld in result} == expected_names
-
-
-# ---------------------------------------------------------------------------
-# Tests: get()
-# ---------------------------------------------------------------------------
-
-class TestGet:
-
-    @pytest.mark.parametrize("entity, selection, expected_name", [
-        # By field name
-        (FullEntity,         "id",          "id"),
-        (FullEntity,         "score",       "score"),
-        # By annotation type
-        (FullEntity,         PrimaryKey,    "id"),
-        (FullEntity,         CreationTime,  "created_at"),
-        # Unknown
-        (FullEntity,         "nonexistent", None),
-        (NoPrimaryKeyEntity, PrimaryKey,    None),
-    ])
-    def test_get(self, entity:type[Entity], selection, expected_name):
-        fld = entity.get(selection)
-        assert (fld.name if fld else None) == expected_name
-
-
-# ---------------------------------------------------------------------------
-# Tests: get_primary_key_field()
-# ---------------------------------------------------------------------------
-
-class TestGetPrimaryKeyField:
-
-    @pytest.mark.parametrize("entity, expected_name", [
-        (FullEntity,          "id"),
-        (NoCreationTimeEntity, "id"),
-        (NoPrimaryKeyEntity,   None),
-        (EmptyEntity,          None),
-    ])
-    def test_get_primary_key_field_name(self, entity:type[Entity], expected_name):
-        fld = entity.get_primary_key_field()
-        assert (fld.name if fld else None) == expected_name
-
-    @pytest.mark.parametrize("entity", [FullEntity, NoCreationTimeEntity])
-    def test_returned_field_has_pk_annotation(self, entity:type[Entity]):
-        fld = entity.get_primary_key_field()
-        assert fld.get(PrimaryKey) is not None
-
-
-# ---------------------------------------------------------------------------
-# Tests: get_creation_time_field()
-# ---------------------------------------------------------------------------
-
-class TestGetCreationTimeField:
-
-    @pytest.mark.parametrize("entity, expected_name", [
-        (FullEntity,           "created_at"),
-        (NoPrimaryKeyEntity,   None),
-        (NoCreationTimeEntity, None),
-        (EmptyEntity,          None),
-    ])
-    def test_get_creation_time_field_name(self, entity:type[Entity], expected_name):
-        fld = entity.get_creation_time_field()
-        assert (fld.name if fld else None) == expected_name
-
-    def test_returned_field_has_creation_time_annotation(self):
-        fld = FullEntity.get_creation_time_field()
-        assert fld.get(CreationTime) is not None

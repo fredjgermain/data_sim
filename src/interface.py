@@ -20,9 +20,6 @@ class IEntityField(Protocol):
     def has(self, *annotation_types: type) -> bool: ...
 
 
-
-
-
 # IEntity  ========================
 class IEntity(Protocol):
     
@@ -42,13 +39,6 @@ class IEntity(Protocol):
     @classmethod
     def get(cls, selection=None): ... 
 
-    # @classmethod
-    # def get_primary_key_field(cls) -> IEntityField: ...
-
-    # @classmethod
-    # def get_creation_time_field(cls) -> IEntityField | None: ...
-        
-
 
 # IEntityContext  =================
 
@@ -57,10 +47,6 @@ class IEntityContext(Protocol):
     preexisting: pd.DataFrame
     N:           int
     generated:   pd.DataFrame 
-
-    def get_primary_key_values(self) -> pd.Series: ...
-
-    def get_creation_time_values(self) -> pd.Series: ...
     
     def get_serie(self, 
         selection: str | type, 
@@ -70,8 +56,7 @@ class IEntityContext(Protocol):
     
     def get_data(
         self,
-        include: list[str | type] | None = None, 
-        exclude: list[str | type] | None = None,
+        selection: list[str | type] | None = None, 
         preexisting: bool =True, 
         generated: bool = True, 
     ) -> pd.DataFrame: ... 

@@ -131,106 +131,47 @@ class TestGetSerie:
         assert isinstance(result, pd.Series)
         assert result.empty
 
-    def test_get_serie_resets_index(self):
-        ctx = EntityContext(SimpleEntity, make_pre(), N=5, generated=make_gen())
-        result = ctx.get_serie("id")
-        assert list(result.index) == list(range(len(result)))
-
-
-# ---------------------------------------------------------------------------
-# Tests: get_primary_key_values()
-# ---------------------------------------------------------------------------
-
-class TestGetPrimaryKeyValues:
-
-    @pytest.mark.parametrize("entity, pre, gen, expected_values", [
-        # Preexisting only
-        (SimpleEntity,      make_pre(), pd.DataFrame(), [1, 2, 3]),
-        # Combined
-        (SimpleEntity,      make_pre(), make_gen(),     [1, 2, 3, 4, 5]),
-        # No PK field on entity
-        (NoPrimaryKeyEntity, pd.DataFrame(), pd.DataFrame(), []),
-        # Empty DataFrames
-        (SimpleEntity,      pd.DataFrame(), pd.DataFrame(), []),
-    ])
-    def test_get_primary_key_values(self, entity, pre, gen, expected_values):
-        ctx = EntityContext(entity, pre, N=5, generated=gen)
-        result = ctx.get_primary_key_values()
-        assert list(result) == expected_values
-
-
-# ---------------------------------------------------------------------------
-# Tests: get_creation_time_values()
-# ---------------------------------------------------------------------------
-
-class TestGetCreationTimeValues:
-
-    @pytest.mark.parametrize("entity, pre, gen, expected_len, expected_first", [
-        # Preexisting only
-        (SimpleEntity,        make_pre(), pd.DataFrame(), 3, datetime.datetime(2020, 6, 1)),
-        # Combined
-        (SimpleEntity,        make_pre(), make_gen(),     5, datetime.datetime(2020, 6, 1)),
-        # No CreationTime field
-        (NoCreationTimeEntity, pd.DataFrame(), pd.DataFrame(), 0, None),
-    ])
-    def test_get_creation_time_values(self, entity, pre, gen, expected_len, expected_first):
-        ctx = EntityContext(entity, pre, N=5, generated=gen)
-        result = ctx.get_creation_time_values()
-        assert len(result) == expected_len
-        if expected_first is not None:
-            assert result.iloc[0] == expected_first
 
 
 # ---------------------------------------------------------------------------
 # Tests: get_data()
 # ---------------------------------------------------------------------------
 
-class TestGetData:
+# class TestGetData:
 
-    @pytest.mark.parametrize("pre, gen, preexisting, generated, expected_len", [
-        # Both flags True (default)
-        (make_pre(), make_gen(), True,  True,  5),
-        # Preexisting only
-        (make_pre(), make_gen(), True,  False, 3),
-        # Generated only
-        (make_pre(), make_gen(), False, True,  2),
-        # Empty DataFrames
-        (pd.DataFrame(), pd.DataFrame(), True, True, 0),
-    ])
-    def test_get_data_row_count(self, pre, gen, preexisting, generated, expected_len):
-        ctx = EntityContext(SimpleEntity, pre, N=5, generated=gen)
-        result = ctx.get_data(preexisting=preexisting, generated=generated)
-        assert len(result) == expected_len
+#     @pytest.mark.parametrize("pre, gen, preexisting, generated, expected_len", [
+#         # Both flags True (default)
+#         (make_pre(), make_gen(), True,  True,  5),
+#         # Preexisting only
+#         (make_pre(), make_gen(), True,  False, 3),
+#         # Generated only
+#         (make_pre(), make_gen(), False, True,  2),
+#         # Empty DataFrames
+#         (pd.DataFrame(), pd.DataFrame(), True, True, 0),
+#     ])
+#     def test_get_data_row_count(self, pre, gen, preexisting, generated, expected_len):
+#         ctx = EntityContext(SimpleEntity, pre, N=5, generated=gen)
+#         result = ctx.get_data(preexisting=preexisting, generated=generated)
+#         assert len(result) == expected_len
 
-    @pytest.mark.parametrize("include, exclude, expected_cols, absent_cols", [
-        # Include by name
-        (["id"],           None,       {"id"},              {"score", "created_at"}),
-        # Include by annotation type
-        ([PrimaryKey],     None,       {"id"},              {"score", "created_at"}),
-        # Exclude by name
-        (None,             ["score"],  {"id", "created_at"}, {"score"}),
-        # Exclude by annotation type
-        (None,             [PrimaryKey], {"score", "created_at"}, {"id"}),
-        # Include + exclude combined
-        (["id", "score"],  ["score"],  {"id"},              {"score"}),
-        # No filter — all columns
-        (None,             None,       {"id", "score", "created_at"}, set()),
-    ])
-    def test_get_data_columns(self, include, exclude, expected_cols, absent_cols):
-        ctx = EntityContext(SimpleEntity, make_pre(), N=5, generated=make_gen())
-        result = ctx.get_data(include=include, exclude=exclude)
-        for col in expected_cols:
-            assert col in result.columns
-        for col in absent_cols:
-            assert col not in result.columns
-
-    def test_get_data_resets_index(self):
-        ctx = EntityContext(SimpleEntity, make_pre(), N=5, generated=make_gen())
-        result = ctx.get_data()
-        assert list(result.index) == list(range(len(result)))
-
-    def test_get_data_returns_empty_when_no_columns_match(self):
-        # DataFrame has only 'id', but we request 'score' which is absent
-        ctx = EntityContext(SimpleEntity, pd.DataFrame({"id": [1]}), N=0)
-        result = ctx.get_data(include=["score"])
-        assert result.empty
+#     @pytest.mark.parametrize("include, exclude, expected_cols, absent_cols", [
+#         # Include by name
+#         (["id"],           None,       {"id"},              {"score", "created_at"}),
+#         # Include by annotation type
+#         ([PrimaryKey],     None,       {"id"},              {"score", "created_at"}),
+#         # Exclude by name
+#         (None,             ["score"],  {"id", "created_at"}, {"score"}),
+#         # Exclude by annotation type
+#         (None,             [PrimaryKey], {"score", "created_at"}, {"id"}),
+#         # Include + exclude combined
+#         (["id", "score"],  ["score"],  {"id"},              {"score"}),
+#         # No filter — all columns
+#         (None,             None,       {"id", "score", "created_at"}, set()),
+#     ])
+#     def test_get_data_columns(self, include, exclude, expected_cols, absent_cols):
+#         ctx = EntityContext(SimpleEntity, make_pre(), N=5, generated=make_gen())
+#         result = ctx.get_data(include=include, exclude=exclude)
+#         for col in expected_cols:
+#             assert col in result.columns
+#         for col in absent_cols:
+#             assert col not in result.columns

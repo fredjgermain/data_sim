@@ -37,7 +37,7 @@ class EntityContext(IEntityContext):
 
 
     def get_data( self,
-        include: list[str | type] = None, 
+        selection: list[str | type] = None, 
         preexisting: bool = True, 
         generated: bool = True, 
     ) -> pd.DataFrame:
@@ -45,7 +45,7 @@ class EntityContext(IEntityContext):
       gen = self.generated if generated else pd.DataFrame()
       
       df = pd.concat([pre, gen], axis=0).reset_index(drop=True)
-      flds = self.entity.get(include)
+      flds = self.entity.get(selection)
       
       selection = [ f.name for f in flds if f.name in list(df.columns)]
       if selection:
