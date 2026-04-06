@@ -31,7 +31,7 @@ class PkCtx:
     def make_ctx(name:str, current_ctx:IEntityContext): 
         pk_fld = current_ctx.entity.get(PrimaryKey) 
         name = pk_fld.name 
-        pk_values = current_ctx.get_data(pre=False)[name] 
+        pk_values = current_ctx.get_data(preexisting=False)[name] 
         return PkCtx(name, current_ctx.N, current_ctx.entity, pk_values) 
 
 

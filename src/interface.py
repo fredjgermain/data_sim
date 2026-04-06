@@ -1,7 +1,6 @@
 import pandas as pd
+from dataclasses import dataclass
 from typing import Protocol, overload
-from typing import Protocol
-
 
 
 class IAnnotation:

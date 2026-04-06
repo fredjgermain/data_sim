@@ -18,7 +18,6 @@ from src.annotations.standardgen import (
 ) 
 from src.annotations.primaries import (PrimaryKey, CreationTime, ForeignKey) 
 from src.annotations.fault import Nullify, Duplicate, Misspell, MissingWord 
-from src.utils.utils import missing_elements 
 
 
 

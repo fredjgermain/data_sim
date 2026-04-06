@@ -44,6 +44,6 @@ class EntityContext(IEntityContext):
       selection = [ f.name for f in flds if f.name in list(df.columns)]
       if selection:
         return df[selection]
-      return pd.DataFrame()
+      return df
   
 

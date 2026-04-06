@@ -96,7 +96,7 @@ class DataSimulator:
                     self._update_report(entity, fld, ann, error=e) 
 
     # ! Pass 3
-    def _pass_creation_times(self) -> pd.Series:
+    def _pass_creation_times(self) -> None:
         for entity, ctx in self.entities.items(): 
             ct_fld = entity.get(CreationTime) 
             if ct_fld is None:

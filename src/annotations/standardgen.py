@@ -28,7 +28,7 @@ class GenCtx:
     return pd.merge(cdata, fdata, left_on=foreignkey, right_on=target_pk.name, how='left') 
 
 
-
+@dataclass
 class IGen(IAnnotation):
     seed: int | None = None
 
