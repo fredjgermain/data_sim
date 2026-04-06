@@ -58,15 +58,21 @@ class Entity(IEntity):
           ann_dict = Entity._parse_annotations(anns) 
           fields[name] = EntityField(name=name, base_type=base_type, annotations=ann_dict) 
       return fields 
-
+  
     @classmethod
     def _parse_annotations(cls, args) -> dict[type[IAnnotation], IAnnotation]:
         ann_dict: dict[type[IAnnotation], IAnnotation] = {}
         for ann in args:
             if not isinstance(ann, IAnnotation):
                 continue
-            ann_dict[type(ann)] = ann
+            ann_type = type(ann)
+            if ann_type in ann_dict:
+                raise TypeError(
+                    f"Duplicate annotation type '{ann_type.__name__}' on the same field."
+                )
+            ann_dict[ann_type] = ann
         return ann_dict
+
 
     @classmethod
     @overload
