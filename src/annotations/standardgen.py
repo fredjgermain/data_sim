@@ -24,7 +24,7 @@ class GenCtx:
     target = self.entity.get(foreignkey).get(ForeignKey).target 
     target_pk = target.get(PrimaryKey) 
     cdata = self.current_data[[foreignkey]] 
-    fdata = self.foreign_datas[target][[foreignkey, *foreignfields]] 
+    fdata = self.foreign_datas[target][[target_pk.name, *foreignfields]] 
     return pd.merge(cdata, fdata, left_on=foreignkey, right_on=target_pk.name, how='left') 
 
 

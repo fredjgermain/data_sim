@@ -3,7 +3,6 @@
 # ---------------------------------------------------------------------------
 
 import pandas as pd
-import numpy as np
 import datetime
 from dataclasses import dataclass, field
 from typing import Callable
@@ -12,6 +11,7 @@ from typing import Callable
 #from src.annotations.standardgen import IGen
 #from src.annotations.standardgen import GenCtx
 from src.interface import IEntity, IAnnotation
+from src.utils import generator
 
 
 @dataclass 
@@ -80,25 +80,26 @@ class CtCtx:
   name:str 
   N:int 
   entity:type[IEntity] 
-  current_data:pd.DataFrame = field(default_factory=pd.DataFrame) 
+  agg_creation_time:pd.Series = field(default_factory=pd.Series) 
   
 
 @dataclass
 class CreationTime(IAnnotation):
     start: datetime.datetime
-    """Earliest possible timestamp (inclusive)."""
-
     end: datetime.datetime
-    """Latest possible timestamp (inclusive)."""
+    
+    seed: int | None = None
 
 
-    def generate(self, ctx: CtCtx) -> pd.Series: 
-        df_start = ctx.current_data.copy() 
-        df_start['start'] = [self.start] * ctx.N # ! careful with dimensions. 
-        start_date = df_start.max(axis=1) 
-        end_date = self.end 
+    def generate(self, ctx: CtCtx) -> pd.Series:
+        if ctx.agg_creation_time.empty:
+            start = pd.Series([self.start] * ctx.N)
+        else:
+            start = ctx.agg_creation_time.clip(lower=self.start)
         
-        ranges = (end_date - start_date).dt.days.clip(lower=0)
-        random_days = (np.random.rand(len(start_date)) * (ranges + 1)).astype(int)
-        return start_date + pd.to_timedelta(random_days, unit='D')
+        end = pd.Series([self.end] * ctx.N)
+        return generator.generate_date(self.seed, start, end)
+        # ranges = (end_date - start_date).dt.days.clip(lower=0)
+        # random_days = (np.random.rand(len(start_date)) * (ranges + 1)).astype(int)
+        # return start_date + pd.to_timedelta(random_days, unit='D')
 

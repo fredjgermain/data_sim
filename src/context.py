@@ -1,7 +1,7 @@
 import pandas as pd 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field 
 
-from src.annotations.primaries import PrimaryKey, CreationTime
+from src.annotations.primaries import PrimaryKey, CreationTime 
 from src.interface import IEntity, IEntityContext, IEntityField 
 
 
@@ -9,17 +9,11 @@ from src.interface import IEntity, IEntityContext, IEntityField
 @dataclass
 class EntityContext(IEntityContext):
 
-
     entity:      type[IEntity]
     preexisting: pd.DataFrame
     N:           int
     generated:   pd.DataFrame = field(default_factory=pd.DataFrame)
 
-    def get_primary_key_values(self) -> pd.Series:
-        return self.get_serie(PrimaryKey)
-
-    def get_creation_time_values(self) -> pd.Series: 
-        return self.get_serie(CreationTime)
 
     def get_serie(self, 
         selection: str | type, 

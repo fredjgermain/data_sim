@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import datetime
 
 from src.interface import IAnnotation 
-from src.annotations.primaries import PrimaryKey, ForeignKey, CreationTime
+from src.annotations.primaries import PkCtx, PrimaryKey, FkCtx, ForeignKey, CtCtx, CreationTime
 from src.annotations.standardgen import IGen, GenCtx, Transformer 
 from src.annotations.fault import IFault, FaultCtx 
 from src.annotations.validation import IValid, ValidCtx 
@@ -71,13 +71,13 @@ class DataSimulator:
                 continue 
             ann = pk_fld.get(PrimaryKey) 
             current_data= ctx.get_data(generated=False) 
-            gen_ctx = GenCtx(name=pk_fld.name, entity=entity, N=ctx.N, current_data=current_data) 
+            gen_ctx = PkCtx(name=pk_fld.name, entity=entity, N=ctx.N, current_data=current_data) 
             try:
                 serie = ann.generate(gen_ctx) 
                 ctx.generated[pk_fld.name] = self._coerce_column(serie, pk_fld.base_type) 
-                self.update_report(entity, pk_fld, ann, serie) 
+                self._update_report(entity, pk_fld, ann, serie) 
             except Exception as e:
-                self.update_report(entity, pk_fld, ann, error=e) 
+                self._update_report(entity, pk_fld, ann, error=e) 
 
     # ! Pass 2 
     def _pass_foreign_keys(self) -> None: 
@@ -86,13 +86,13 @@ class DataSimulator:
                 ann = fld.get(ForeignKey) 
                 #target = ann.target 
                 foreign_datas = { e:c.get_data() for e, c in self.entities.items() } 
-                gen_ctx = GenCtx(name=fld.name, entity=entity, N=ctx.N, foreign_datas=foreign_datas) 
+                gen_ctx = FkCtx(name=fld.name, entity=entity, N=ctx.N, foreign_datas=foreign_datas) 
                 try:
                     serie = ann.generate(gen_ctx) 
                     ctx.generated[fld.name] = self._coerce_column(serie, fld.base_type) 
-                    self.update_report(entity, fld, ann, serie) 
+                    self._update_report(entity, fld, ann, serie) 
                 except Exception as e:
-                    self.update_report(entity, fld, ann, error=e) 
+                    self._update_report(entity, fld, ann, error=e) 
 
     # ! Pass 3
     def _pass_creation_times(self) -> pd.Series:
@@ -104,13 +104,13 @@ class DataSimulator:
             ann = ct_fld.get(CreationTime) 
             # ! Aggregate creation time to find lower bound 
             df_agg_ct = self._aggregate_creation_time(ctx) 
-            gen_ctx = GenCtx(name=ct_fld.name, entity=entity, N=ctx.N, current_data=df_agg_ct) 
+            gen_ctx = CtCtx(name=ct_fld.name, entity=entity, N=ctx.N, agg_creation_times=df_agg_ct) 
             try:
                 serie = ann.generate(gen_ctx) 
                 ctx.generated[ct_fld.name] = self._coerce_column(serie, ct_fld.base_type) 
-                self.update_report(entity, ct_fld, ann, serie) 
+                self._update_report(entity, ct_fld, ann, serie) 
             except Exception as e: 
-                self.update_report(entity, ct_fld, ann, error=e) 
+                self._update_report(entity, ct_fld, ann, error=e) 
 
 
     # ! pass 4 
@@ -129,9 +129,9 @@ class DataSimulator:
                         serie = ann_trf.transform(serie) 
 
                     ctx.generated[fld.name] = self._coerce_column(serie, fld.base_type) 
-                    self.update_report(entity, fld, ann_gen, serie) 
+                    self._update_report(entity, fld, ann_gen, serie) 
                 except Exception as e:
-                    self.update_report(entity, fld, ann_gen, error=e) 
+                    self._update_report(entity, fld, ann_gen, error=e) 
     
     # ! Pass 5: Fault injection
     def _pass_fault_injection(self) -> None:
@@ -144,9 +144,9 @@ class DataSimulator:
                     try:
                         serie = ann.inject(fault_ctx) 
                         ctx.generated[fld.name] = serie 
-                        self.update_report(entity, fld, ann, serie) 
+                        self._update_report(entity, fld, ann, serie) 
                     except Exception as e: 
-                        self.update_report(entity, fld, ann, error=e) 
+                        self._update_report(entity, fld, ann, error=e) 
     
     # ! Pass 6: Validation 
     def _pass_validation(self) -> None: 
@@ -157,13 +157,13 @@ class DataSimulator:
                 for ann in fld.get_many(IValid): 
                     try:
                         res = ann.validate(valid_ctx) 
-                        self.update_report(entity, fld, ann, res.invalid_values) 
+                        self._update_report(entity, fld, ann, res.invalid_values) 
                     except Exception as e: 
-                        self.update_report(entity, fld, ann, error=e) 
+                        self._update_report(entity, fld, ann, error=e) 
 
 
     # Internal helpers ==================================== 
-    def update_report(self, entity:type[Entity], fld:EntityField, anno:IAnnotation, result:pd.Series = None, error:Exception = None): 
+    def _update_report(self, entity:type[Entity], fld:EntityField, anno:IAnnotation, result:pd.Series = None, error:Exception = None): 
         report = self.report[entity].fld_report[fld.name] 
         k = anno.__class__.__name__ 
         if not result is None:

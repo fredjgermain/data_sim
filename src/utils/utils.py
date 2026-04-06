@@ -1,87 +1,56 @@
-import random
-import string 
-import numpy as np 
-import pandas as pd
-from scipy.stats import skewnorm
 
+import pandas as pd 
+from src.annotations.primaries import ForeignKey, PrimaryKey, CreationTime
 
-# ! GENERATE numerical values 
-def generate_gamma(N:int, seed, skewness:float, scale:float) -> pd.Series:
-  rng = np.random.default_rng(seed)
-  shape = (2 / skewness) ** 2
-  return pd.Series(rng.gamma(shape=shape, scale=scale, size=N))
-
-
-def generate_poisson(N:int, seed, mean:float) -> pd.Series:
-  rng = np.random.default_rng(seed)
-  return pd.Series(rng.poisson(lam=mean, size=N))
-
-
-def generate_exponential(N:int, seed, scale:float) -> pd.Series:
-  rng = np.random.default_rng(seed)
-  return pd.Series(rng.exponential(scale=scale, size=N))
-
-
-def generate_normal(N:int, seed, skewness:float, mean:float=0, std:float=1) -> pd.Series:
-  rng = np.random.default_rng(seed)
-  return pd.Series(skewnorm.rvs(a=skewness, loc=mean, scale=std, size=N, random_state=rng))
-
-
-def generate_uniform(N:int, seed, min:float, max:float) -> pd.Series:
-  rng = np.random.default_rng(seed)
-  return pd.Series(rng.uniform(low=min, high=max, size=N))
-
-
-def generate_categorical(N: int, seed, categories: list, weight: list | None = None) -> pd.Series:
-  if weight is not None:
-    if len(weight) != len(categories):
-      raise ValueError('Weights length must match categories length')
-    weight = np.array(weight, dtype=float)
-    weight = weight / weight.sum()  # normalize
-
-  rng = np.random.default_rng(seed)
-  return pd.Series(rng.choice(categories, size=N, p=weight))
+from src.interface import IEntity, IEntityContext
+#from src.context import EntityContext
 
 
 
-# ! GENERATE basic date values 
-def generate_date(seed, start: pd.Series, end: pd.Series) -> pd.Series:
-  rng = np.random.default_rng(seed)
-  ranges = (end - start).dt.days.clip(lower=0)
-  random_days = (rng.random(len(start)) * (ranges + 1)).astype(int)  # fix: was np.random.rand
-  return start + pd.to_timedelta(random_days, unit='D')
-
-
-def generate_time(seed, start: pd.Series, end: pd.Series) -> pd.Series:
-  rng = np.random.default_rng(seed)
-  ranges_s = (end - start).dt.total_seconds().clip(lower=0)
-  random_s = (rng.random(len(start)) * (ranges_s + 1)).astype(int)
-  return start + pd.to_timedelta(random_s, unit='s')
-
-
-
-
-
-
-def scramble_letters(text:str, prob:float=0.03): 
-  shuffled = list(text) 
-  random.shuffle(shuffled) 
+def from_foreign( 
+  entity:type[IEntity], 
+  fk:pd.DataFrame, 
+  foreign_fields:list[str|type], 
+  foreign_datas:dict[type[IEntity], pd.DataFrame] 
+) -> pd.DataFrame: 
   
-  scrambling_prob = [random.uniform(0, 1) >= prob for _ in range(len(text))] 
-  zipped = zip(list(text), shuffled, scrambling_prob) 
-  scrambled = [ a if c else b for a,b,c in zipped ] 
+  fk_name = list(fk.columns)[0] 
+  target = entity.get(fk_name).get(ForeignKey).target 
+  target_pk = target.get(PrimaryKey) 
+  target_names = [ f.name for f in target.get(foreign_fields) ] 
+  fdata = foreign_datas[target][[target_pk.name, *target_names]] 
+  merged = pd.merge(fk, fdata, left_on=fk_name, right_on=target_pk.name, how='left') 
+  return merged[[fk_name, *target_names]] 
+
+
+
+def aggregate_creation_time(
+  entity:type[IEntity], 
+  current_data:pd.DataFrame, 
+  foreign_datas:dict[type[IEntity], pd.DataFrame] 
+) -> pd.Series:
   
-  res = []
-  for a in scrambled: 
-    p = random.uniform(0, 1) 
-    if p >= prob: 
-      res.append(a) 
-    elif p >= prob/2: # ! Add a random letter 
-      res.append(random.choice(string.ascii_lowercase)) 
+  args = {'entity':entity, 'foreign_fields': [CreationTime], 'foreign_datas': foreign_datas } 
   
-  return ''.join(res) 
+  dfs:list[pd.DataFrame] = [] 
+  for fld in entity.get([ForeignKey]): 
+    df = from_foreign(fk=current_data[fld.name], **args).reset_index(drop=True) 
+    if df.empty: 
+      continue 
+    dfs.append(df.drop(columns=fld.name)) 
+  # ! no need to rename 
+  return pd.concat(dfs, axis=1).max(axis=1).rename('agg_creation_time') 
 
 
-def missing_elements(elements:list, prob:float=0.03): 
-  return [c for c in elements if random.uniform(0,1) >= prob ] 
 
+def aggregate_from_foreign_fields( 
+  entity:type[IEntity], 
+  current_data:pd.DataFrame, 
+  foreign_key_fields:dict[str, list[str|type]], 
+  foreign_datas:dict[type[IEntity], pd.DataFrame] 
+) -> dict[str, pd.DataFrame]: 
+  
+  result = {} 
+  for fk, ffields in foreign_key_fields.items(): 
+    result[fk] = from_foreign(entity, current_data[[fk]], ffields, foreign_datas) 
+  return result

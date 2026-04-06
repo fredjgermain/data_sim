@@ -39,6 +39,7 @@ class Customer(Entity):
                      end=datetime.datetime(2023, 12, 31),
                  )]
     region_id:   Annotated[int,   ForeignKey(Region)]
+    region2_id:  Annotated[int,   ForeignKey(Region)]
     email:       Annotated[str,  GenFaker("email"), Unique()]
     sexe:        Annotated[int,  GenCategorical(categories=['male', 'female'])] 
     age:         Annotated[int,  GenNormal(min=18, max=90, mean=40, std=15, rounding=0)]
