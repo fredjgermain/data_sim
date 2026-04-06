@@ -39,11 +39,13 @@ class EntityContext(IEntityContext):
       gen = self.generated if generated else pd.DataFrame()
       
       df = pd.concat([pre, gen], axis=0).reset_index(drop=True)
-      flds = self.entity.get(selection)
       
+      if selection is None:
+        return df 
+      
+      flds = self.entity.get(selection)
       selection = [ f.name for f in flds if f.name in list(df.columns)]
-      if selection:
-        return df[selection]
-      return df
-  
+      if not selection:
+        raise KeyError(f"None of the selected fields were found in the DataFrame.")
+      return df[selection]
 

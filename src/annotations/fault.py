@@ -11,7 +11,7 @@ class FaultCtx:
     name:str
     current_serie: pd.Series = field(default_factory=pd.Series)
 
-@dataclass
+
 class IFault(IAnnotation):
 
     def inject(self, ctx:FaultCtx) -> pd.Series:

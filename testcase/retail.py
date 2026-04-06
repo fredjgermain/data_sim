@@ -23,7 +23,7 @@ from src.annotations.fault import Nullify, Duplicate
 @dataclass
 class Region(Entity):
     region_id:  Annotated[int, PrimaryKey()]
-    created_at: Annotated[datetime.datetime, CreationTime(
+    founded_at: Annotated[datetime.datetime, CreationTime(
                     start=datetime.datetime(1998, 1, 1),
                     end=datetime.datetime(2002, 1, 1),
                 )]
@@ -65,7 +65,7 @@ class Transaction(Entity):
     ref:            Annotated[str,   GenPattern(r'TXN-\d{8}'), Unique(), Duplicate(prob=0.1)]
     # fault injections
     amount_nulls:   Annotated[float, GenNormal(min=0, mean=150, std=80, rounding=2), Nullify(prob=0.03)]
-    #ref_dupes:      Annotated[str,   Duplicate(rate=0.02)]
+    ref_dupes:      Annotated[str,   GenPattern(r'[A-Z]{3}-\d{4}'),  Duplicate(prob=0.02)]
 
 
 # ---------------------------------------------------------------------------
@@ -74,7 +74,7 @@ class Transaction(Entity):
 
 df_region_pre = pd.DataFrame({
     "region_id":  [1, 2],
-    "created_at": [datetime.datetime(2000, 6, 1), datetime.datetime(2001, 3, 15)],
+    "founded_at": [datetime.datetime(2000, 6, 1), datetime.datetime(2001, 3, 15)],
     "name":       ["North", "South"],
     "code":       ["NA-001", "SA-002"],
 })
@@ -114,6 +114,3 @@ print(results[Customer].shape)
 print("=== Transaction ===")
 print(results[Transaction].head())
 print(results[Transaction].shape)
-
-# print(f"Null amounts: {results[Transaction]['amount_nulls'].isna().sum()}")
-#print(f"Duplicate refs: {results[Transaction]['ref_dupes'].duplicated().sum()}")

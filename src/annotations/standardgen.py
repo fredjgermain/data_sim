@@ -28,7 +28,7 @@ class GenCtx:
     return pd.merge(cdata, fdata, left_on=foreignkey, right_on=target_pk.name, how='left') 
 
 
-@dataclass
+
 class IGen(IAnnotation):
     seed: int | None = None
 
@@ -86,12 +86,13 @@ class GenNormal(GenNum):
     skewness: float = 0 
 
     def generate(self, ctx: GenCtx) -> pd.Series:
-        return generator.generate_normal(
+        res = generator.generate_normal(
             ctx.N, 
             self.seed, 
             self.skewness, 
             self.mean, 
             self.std)
+        return self.clip(self.apply_rounding(res))
 
 
 
@@ -101,11 +102,12 @@ class GenGamma(GenNum):
     scale: float = 1.0
     
     def generate(self, ctx: GenCtx) -> pd.Series:
-        return generator.generate_gamma(
+        res = generator.generate_gamma(
             ctx.N, 
             self.seed, 
             self.skewness, 
             self.scale)
+        return self.clip(self.apply_rounding(res))
 
 
 @dataclass
@@ -113,7 +115,8 @@ class GenPoisson(GenNum):
     mean: float = 1.0
     
     def generate(self, ctx: GenCtx) -> pd.Series:
-        return generator.generate_poisson(ctx.N, self.seed, self.mean)
+        res = generator.generate_poisson(ctx.N, self.seed, self.mean)
+        return self.clip(self.apply_rounding(res))
 
 
 @dataclass
@@ -121,7 +124,8 @@ class GenExponential(GenNum):
   scale: float = 1.0
 
   def generate(self, ctx: GenCtx) -> pd.Series:
-    return generator.generate_exponential(ctx.N, self.seed, self.scale)
+    res = generator.generate_exponential(ctx.N, self.seed, self.scale)
+    return self.clip(self.apply_rounding(res))
 
 
 

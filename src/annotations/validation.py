@@ -19,7 +19,7 @@ class ValidationReport:
     invalid_values: pd.Series
 
 
-@dataclass
+
 class IValid(IAnnotation):
 
     def validate(self, ctx:ValidCtx) -> ValidationReport:

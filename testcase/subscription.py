@@ -64,6 +64,10 @@ GENRES = [
 @dataclass
 class Region(Entity):
     region_id:  Annotated[int, PrimaryKey()]
+    created_at: Annotated[datetime.datetime, CreationTime(
+                start=datetime.datetime(1998, 1, 1),
+                end=datetime.datetime(2002, 1, 1),
+            )]
     name:       Annotated[str,  GenFaker("city")]
     code:       Annotated[str,  GenPattern(r'[A-Z]{2}-\d{3}'), Unique()]
 
@@ -119,4 +123,4 @@ results = sim.simulate()
 for e in entities.keys(): 
   print(results[e].head()) 
 
-print(results[e][['complaints_N', 'res_time']].sort_values(by=['complaints_N'])) 
+#print(results[e][['complaints_N', 'res_time']].sort_values(by=['complaints_N'])) 
