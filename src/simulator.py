@@ -7,6 +7,7 @@ from src.annotations.primaries import PkCtx, PrimaryKey, FkCtx, ForeignKey, CtCt
 from src.annotations.standardgen import IGen, GenCtx, Transformer 
 from src.annotations.fault import IFault, FaultCtx 
 from src.annotations.validation import IValid, ValidCtx 
+from src.utils.utils import aggregate_creation_time 
 
 from src.context import EntityContext 
 from src.entity import Entity, EntityField 
@@ -103,10 +104,15 @@ class DataSimulator:
             
             ann = ct_fld.get(CreationTime) 
             # ! Aggregate creation time to find lower bound 
-            df_agg_ct = self._aggregate_creation_time(ctx) 
-            gen_ctx = CtCtx(name=ct_fld.name, entity=entity, N=ctx.N, agg_creation_times=df_agg_ct) 
+            cdata = ctx.get_data(preexisting=False) 
+            fdatas = { e:d.get_data() for e,d in self.entities.items() } 
+            agg_creation_time = aggregate_creation_time(ctx.entity, cdata, fdatas ) 
+            
+            ct_ctx = CtCtx(ct_fld.name, ctx.N, entity, agg_creation_time)
+            #df_agg_ct = self._aggregate_creation_time(ctx) 
+            #ct_ctx #= CtCtx(name=ct_fld.name, entity=entity, N=ctx.N, agg_creation_times=df_agg_ct) 
             try:
-                serie = ann.generate(gen_ctx) 
+                serie = ann.generate(ct_ctx) 
                 ctx.generated[ct_fld.name] = self._coerce_column(serie, ct_fld.base_type) 
                 self._update_report(entity, ct_fld, ann, serie) 
             except Exception as e: 
@@ -170,26 +176,6 @@ class DataSimulator:
             report.results[k] = result 
         if not error is None:
             report.error[k] = error 
-
-    
-    def _aggregate_creation_time(self, current_ctx:EntityContext) -> pd.DataFrame: 
-        '''Returns a dataframe of creationtime from 0 to N columns'''
-        df = current_ctx.get_data([ForeignKey], preexisting=False) 
-        
-        for i, fld in enumerate(current_ctx.entity.get([ForeignKey])): 
-            fk_ann = fld.get(ForeignKey)
-            parent_ctx = self._resolve_ctx(fk_ann.target) 
-            parent_pk_fld = parent_ctx.entity.get(PrimaryKey) 
-            parent_ct_fld = parent_ctx.entity.get(CreationTime) 
-            if not parent_pk_fld or not parent_ct_fld: 
-                continue 
-            
-            df_parent = parent_ctx.get_data([PrimaryKey, CreationTime], preexisting=False) # ! must get data on generate not on all data. 
-            df_parent = df_parent.rename(columns={parent_ct_fld.name:f"{i}"}) 
-            df = pd.merge(df, df_parent, left_on=fld.name, right_on=parent_pk_fld.name, how='left') 
-            # drops keys leaving only creationtime 
-            df = df.drop(columns=list({fld.name, parent_pk_fld.name})) 
-        return df 
 
 
     def _resolve_ctx(self, entity: type[Entity]) -> EntityContext:

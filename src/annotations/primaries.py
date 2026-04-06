@@ -10,8 +10,12 @@ from typing import Callable
 
 #from src.annotations.standardgen import IGen
 #from src.annotations.standardgen import GenCtx
-from src.interface import IEntity, IAnnotation
-from src.utils import generator
+from src.interface import IEntity, IAnnotation, IEntityContext
+from src.utils import generator 
+
+
+
+
 
 
 @dataclass 
@@ -21,6 +25,15 @@ class PkCtx:
     entity:type[IEntity] 
     current_data:pd.DataFrame = field(default_factory=pd.DataFrame) 
     
+    # name:str, ctx:IEntityContext, entities:dict[type[IEntity], IEntityContext]
+    
+    @classmethod
+    def make_ctx(name:str, current_ctx:IEntityContext): 
+        pk_fld = current_ctx.entity.get(PrimaryKey) 
+        name = pk_fld.name 
+        pk_values = current_ctx.get_data(pre=False)[name] 
+        return PkCtx(name, current_ctx.N, current_ctx.entity, pk_values) 
+
 
 
 @dataclass
@@ -59,6 +72,17 @@ class FkCtx:
 @dataclass
 class ForeignKey(IAnnotation):
     target: type[IEntity]
+    
+    @classmethod
+    def make_ctx(name:str, current_ctx:IEntityContext, entities:dict[type[IEntity], IEntityContext]): 
+        fdatas = {} 
+        for fld in current_ctx.entity.get([ForeignKey]): 
+            target = fld.get(ForeignKey).target 
+            pk = target.get(PrimaryKey) 
+            fdatas[target] = entities[target][pk.name] 
+
+        return FkCtx(name, current_ctx.N, current_ctx.entity, fdatas) 
+
 
     def generate(self, ctx: FkCtx) -> pd.Series: 
         target_data = ctx.foreign_datas.get(self.target) 
@@ -81,6 +105,11 @@ class CtCtx:
   N:int 
   entity:type[IEntity] 
   agg_creation_time:pd.Series = field(default_factory=pd.Series) 
+  
+
+  #@classmethod
+  #def make_ctx(cls, name:str, ctx:IEntityContext, entities:dict[type[IEntity], IEntityContext]): 
+    #return CtCtx(name, ctx.N, ctx.entity, agg_creation_time) 
   
 
 @dataclass
