@@ -3,11 +3,12 @@ from dataclasses import dataclass, field
 import datetime
 
 from src.interface import IAnnotation 
-from src.annotations.primaries import PkCtx, PrimaryKey, FkCtx, ForeignKey, CtCtx, CreationTime
+from src.annotations.primaries import (
+    PkCtx, PrimaryKey, FkCtx, ForeignKey, CtCtx, CreationTime, aggregate_creation_time 
+    )
 from src.annotations.standardgen import IGen, GenCtx, Transformer 
 from src.annotations.fault import IFault, FaultCtx 
 from src.annotations.validation import IValid, ValidCtx 
-from src.utils.utils import aggregate_creation_time 
 
 from src.context import EntityContext 
 from src.entity import Entity, EntityField 
@@ -67,14 +68,13 @@ class DataSimulator:
     # ! Pass 1 
     def _pass_primary_keys(self) -> None: 
         for entity, ctx in self.entities.items(): 
-            pk_fld = entity.get(PrimaryKey)
+            pk_fld = entity.get(PrimaryKey) 
             if pk_fld is None: 
                 continue 
             ann = pk_fld.get(PrimaryKey) 
-            current_data= ctx.get_data(generated=False) 
-            gen_ctx = PkCtx(name=pk_fld.name, entity=entity, N=ctx.N, pk_values=current_data) 
+            pk_ctx = PkCtx.make_ctx(ctx)
             try:
-                serie = ann.generate(gen_ctx) 
+                serie = ann.generate(pk_ctx) 
                 ctx.generated[pk_fld.name] = self._coerce_column(serie, pk_fld.base_type) 
                 self._update_report(entity, pk_fld, ann, serie) 
             except Exception as e:
@@ -85,11 +85,9 @@ class DataSimulator:
         for entity, ctx in self.entities.items(): 
             for fld in entity.get([ForeignKey]): 
                 ann = fld.get(ForeignKey) 
-                #target = ann.target 
-                foreign_datas = { e:c.get_data() for e, c in self.entities.items() } 
-                gen_ctx = FkCtx(name=fld.name, entity=entity, N=ctx.N, foreign_datas=foreign_datas) 
+                fk_ctx = FkCtx.make_ctx(fld.name, ctx, self.entities)
                 try:
-                    serie = ann.generate(gen_ctx) 
+                    serie = ann.generate(fk_ctx) 
                     ctx.generated[fld.name] = self._coerce_column(serie, fld.base_type) 
                     self._update_report(entity, fld, ann, serie) 
                 except Exception as e:
@@ -106,11 +104,10 @@ class DataSimulator:
             # ! Aggregate creation time to find lower bound 
             cdata = ctx.get_data(preexisting=False) 
             fdatas = { e:d.get_data() for e,d in self.entities.items() } 
-            agg_creation_time = aggregate_creation_time(ctx.entity, cdata, fdatas ) 
             
+            agg_creation_time = aggregate_creation_time(ctx.entity, cdata, fdatas ) 
+                        
             ct_ctx = CtCtx(ct_fld.name, ctx.N, entity, agg_creation_time)
-            #df_agg_ct = self._aggregate_creation_time(ctx) 
-            #ct_ctx #= CtCtx(name=ct_fld.name, entity=entity, N=ctx.N, agg_creation_times=df_agg_ct) 
             try:
                 serie = ann.generate(ct_ctx) 
                 ctx.generated[ct_fld.name] = self._coerce_column(serie, ct_fld.base_type) 

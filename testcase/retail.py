@@ -85,7 +85,7 @@ df_region_pre = pd.DataFrame({
 # ---------------------------------------------------------------------------
 
 entities = {
-    Region:      EntityContext(Region,      preexisting=df_region_pre,        N=8),
+    Region:      EntityContext(Region,      preexisting=df_region_pre, N=8),
     Customer:    EntityContext(Customer,    N=200),
     Transaction: EntityContext(Transaction, N=1000),
 }

@@ -39,9 +39,21 @@ df_region_pre = pd.DataFrame({
 # Simulation
 # ---------------------------------------------------------------------------
 
-ctx = EntityContext(Region,      df_region_pre,        N=8)
+ctx = EntityContext(Region, N=8, preexisting=df_region_pre)
 
 pk_ctx = PkCtx.make_ctx(ctx) 
 
 print(all(pk_ctx.pk_values == df_region_pre['region_id']) )
+
+df_test = df_region_pre[['region_id']].copy() 
+#df_test.columns = ['region_id', 'test1', 'test2'] 
+
+pk_serie = df_region_pre["region_id"] 
+serie = pd.Series() 
+serie.name = 'test_column' 
+print(f"is serie empty ? {serie.name} {serie.empty} ") 
+
+
+df = pd.DataFrame(columns=['var1', 'var2']) 
+print(df.columns) 
 

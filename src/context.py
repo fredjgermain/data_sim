@@ -1,7 +1,6 @@
 import pandas as pd 
 from dataclasses import dataclass, field 
 
-#from src.annotations.primaries import PrimaryKey, CreationTime 
 from src.interface import IEntity, IEntityContext
 
 
@@ -20,13 +19,26 @@ class EntityContext(IEntityContext):
         preexisting: bool = True, 
         generated: bool = True
     ) -> pd.Series:
+        '''
+        Receives a selection (str or annotation type), 
+        Return a single corresponding pd.Serie. 
+            - empty serie if there's no corresponding field. 
+            - empty serie with name if there no data but a corresponding field. 
+            - serie with data and name if there's data and corresponding field. 
+        '''
+        
         pre = self.preexisting if preexisting else pd.DataFrame() 
         gen = self.generated if generated else pd.DataFrame() 
         
         df = pd.concat([pre, gen]).reset_index(drop=True) 
         fld = self.entity.get(selection) 
-        if fld is None or fld.name not in list(df.columns): 
+        
+        if fld is None: 
             return pd.Series(dtype=object) 
+        if fld.name not in list(df.columns): 
+            return pd.Series(name=fld.name) 
+        # if fld is None or fld.name not in list(df.columns): 
+        #     return pd.Series(dtype=object) 
         return df[fld.name] 
 
 

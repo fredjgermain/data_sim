@@ -7,15 +7,8 @@ import datetime
 from dataclasses import dataclass, field
 from typing import Callable
 
-
-#from src.annotations.standardgen import IGen
-#from src.annotations.standardgen import GenCtx
 from src.interface import IEntity, IAnnotation, IEntityContext 
 from src.utils import generator 
-
-
-
-
 
 
 @dataclass 
@@ -27,11 +20,11 @@ class PkCtx:
     
     @classmethod
     def make_ctx(cls, current_ctx:IEntityContext) -> PkCtx: 
-        pk_fld = current_ctx.entity.get(PrimaryKey) 
-        name = pk_fld.name 
-        print(name)
-        pk_values = current_ctx.get_serie(name, generated=False) # ! can cause error if no precedent values are set. 
-        return PkCtx(name, current_ctx.N, current_ctx.entity, pk_values) 
+        pk_values = current_ctx.get_serie(PrimaryKey, generated=False) 
+        #pk_fld = current_ctx.entity.get(PrimaryKey) 
+        #name = pk_fld.name 
+        #pk_values = current_ctx.get_serie(name, generated=False) # ! can cause error if no precedent values are set. 
+        return PkCtx(pk_values.name, current_ctx.N, current_ctx.entity, pk_values) 
 
 
 
@@ -50,10 +43,9 @@ class PrimaryKey(IAnnotation):
         if ctx.pk_values.empty:
             start = 1
         else:
-            pk_col = ctx.pk_values[ctx.name]
-            start = int(pk_col.max()) + 1
+            start = int(ctx.pk_values.max()) + 1
         return pd.Series(range(start, start + ctx.N), dtype='int64')
-    
+
 
 # ---------------------------------------------------------------------------
 # ForeignKey
@@ -65,33 +57,27 @@ class FkCtx:
   name:str 
   N:int 
   entity:type[IEntity] 
-  foreign_datas:dict[type[IEntity], pd.DataFrame] = field(default_factory=dict) 
+  fk_values:pd.Series = field(default_factory=pd.Series) 
+  
+
+  @classmethod
+  def make_ctx(cls, name:str, current_ctx:IEntityContext, entities:dict[type[IEntity], IEntityContext]): 
+      entity = current_ctx.entity 
+      target = entity.get(name).get(ForeignKey).target 
+      fk_values = entities[target].get_serie(PrimaryKey) 
+      return FkCtx(name, current_ctx.N, entity, fk_values) 
   
 
 @dataclass
 class ForeignKey(IAnnotation):
     target: type[IEntity]
-    
-    @classmethod
-    def make_ctx(name:str, current_ctx:IEntityContext, entities:dict[type[IEntity], IEntityContext]): 
-        fdatas = {} 
-        for fld in current_ctx.entity.get([ForeignKey]): 
-            target = fld.get(ForeignKey).target 
-            pk = target.get(PrimaryKey) 
-            fdatas[target] = entities[target][pk.name] 
-
-        return FkCtx(name, current_ctx.N, current_ctx.entity, fdatas) 
-
 
     def generate(self, ctx: FkCtx) -> pd.Series: 
-        target_data = ctx.foreign_datas.get(self.target) 
-        target_pk_fld = self.target.get(PrimaryKey) 
-        if target_data is None or target_data.empty or target_pk_fld is None: 
+        if ctx.fk_values is None or ctx.fk_values.empty: 
             raise ValueError( 
                 f"ForeignKey target '{self.target.__name__}' has no data to sample from." 
             ) 
-        target_pk_values = target_data[target_pk_fld.name] 
-        return target_pk_values.sample(n=ctx.N, replace=True).reset_index(drop=True) 
+        return ctx.fk_values.sample(n=ctx.N, replace=True).reset_index(drop=True) 
 
 
 # ---------------------------------------------------------------------------
@@ -106,9 +92,9 @@ class CtCtx:
   agg_creation_time:pd.Series = field(default_factory=pd.Series) 
   
 
-  #@classmethod
-  #def make_ctx(cls, name:str, ctx:IEntityContext, entities:dict[type[IEntity], IEntityContext]): 
-    #return CtCtx(name, ctx.N, ctx.entity, agg_creation_time) 
+#   @classmethod
+#   def make_ctx(cls, name:str, ctx:IEntityContext, entities:dict[type[IEntity], IEntityContext]): 
+#     return CtCtx(name, ctx.N, ctx.entity, agg_creation_time) 
   
 
 @dataclass
@@ -127,6 +113,46 @@ class CreationTime(IAnnotation):
         
         end = pd.Series([self.end] * ctx.N)
         return generator.generate_date(self.seed, start, end)
+
+
+
+def from_foreign(
+  entity:type[IEntity],
+  fk:pd.Series,
+  foreign_fields:list[str|type],
+  foreign_datas:dict[type[IEntity], pd.DataFrame]
+) -> pd.DataFrame:
+
+  fk_name = str(fk.name)
+  target = entity.get(fk_name).get(ForeignKey).target
+  target_pk = target.get(PrimaryKey)
+  target_names = [ f.name for f in target.get(foreign_fields) ]
+  fdata = foreign_datas[target][[target_pk.name, *target_names]]
+
+  merged = pd.merge(pd.DataFrame(fk), fdata, left_on=fk_name, right_on=target_pk.name, how='left')
+  return merged[[fk_name, *target_names]]
+
+
+
+def aggregate_creation_time(
+  entity:type[IEntity],
+  current_data:pd.DataFrame,
+  foreign_datas:dict[type[IEntity], pd.DataFrame]
+) -> pd.Series:
+
+  args = {'entity':entity, 'foreign_fields': [CreationTime], 'foreign_datas': foreign_datas }
+
+  dfs:list[pd.DataFrame] = []
+  for fld in entity.get([ForeignKey]):
+
+    df = from_foreign(fk=current_data[fld.name], **args).reset_index(drop=True)
+    if df.empty:
+      continue
+    dfs.append(df.drop(columns=fld.name))
+  if not dfs:
+    return pd.Series()
+  # ! no need to rename 
+  return pd.concat(dfs, axis=1).max(axis=1).rename('agg_creation_time')
         # ranges = (end_date - start_date).dt.days.clip(lower=0)
         # random_days = (np.random.rand(len(start_date)) * (ranges + 1)).astype(int)
         # return start_date + pd.to_timedelta(random_days, unit='D')
