@@ -108,10 +108,10 @@ class Subscription(Entity):
   
 
 entities = {
-    Region:       EntityContext(Region,     pd.DataFrame(),    N=12), 
-    Customer:     EntityContext(Customer,   pd.DataFrame(),   N=200), 
-    Movie:        EntityContext(Movie,      pd.DataFrame(),   N=1000), 
-    Subscription: EntityContext(Subscription, pd.DataFrame(), N=200) 
+    Region:       EntityContext(Region,        N=12), 
+    Customer:     EntityContext(Customer,      N=200), 
+    Movie:        EntityContext(Movie,         N=1000), 
+    Subscription: EntityContext(Subscription,  N=200) 
 } 
 
 

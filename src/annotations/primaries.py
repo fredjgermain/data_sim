@@ -10,7 +10,7 @@ from typing import Callable
 
 #from src.annotations.standardgen import IGen
 #from src.annotations.standardgen import GenCtx
-from src.interface import IEntity, IAnnotation, IEntityContext
+from src.interface import IEntity, IAnnotation, IEntityContext 
 from src.utils import generator 
 
 
@@ -23,15 +23,14 @@ class PkCtx:
     name:str 
     N:int 
     entity:type[IEntity] 
-    current_data:pd.DataFrame = field(default_factory=pd.DataFrame) 
-    
-    # name:str, ctx:IEntityContext, entities:dict[type[IEntity], IEntityContext]
+    pk_values:pd.Series = field(default_factory=pd.Series) 
     
     @classmethod
-    def make_ctx(name:str, current_ctx:IEntityContext): 
+    def make_ctx(cls, current_ctx:IEntityContext) -> PkCtx: 
         pk_fld = current_ctx.entity.get(PrimaryKey) 
         name = pk_fld.name 
-        pk_values = current_ctx.get_data(preexisting=False)[name] 
+        print(name)
+        pk_values = current_ctx.get_serie(name, generated=False) # ! can cause error if no precedent values are set. 
         return PkCtx(name, current_ctx.N, current_ctx.entity, pk_values) 
 
 
@@ -48,10 +47,10 @@ class PrimaryKey(IAnnotation):
 
     # default generation method 
     def _generate_sequential(self, ctx:PkCtx) -> pd.Series:
-        if ctx.current_data.empty:
+        if ctx.pk_values.empty:
             start = 1
         else:
-            pk_col = ctx.current_data[ctx.name]
+            pk_col = ctx.pk_values[ctx.name]
             start = int(pk_col.max()) + 1
         return pd.Series(range(start, start + ctx.N), dtype='int64')
     

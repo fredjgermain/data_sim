@@ -72,7 +72,7 @@ class DataSimulator:
                 continue 
             ann = pk_fld.get(PrimaryKey) 
             current_data= ctx.get_data(generated=False) 
-            gen_ctx = PkCtx(name=pk_fld.name, entity=entity, N=ctx.N, current_data=current_data) 
+            gen_ctx = PkCtx(name=pk_fld.name, entity=entity, N=ctx.N, pk_values=current_data) 
             try:
                 serie = ann.generate(gen_ctx) 
                 ctx.generated[pk_fld.name] = self._coerce_column(serie, pk_fld.base_type) 

@@ -10,8 +10,8 @@ from src.interface import IEntity, IEntityContext
 class EntityContext(IEntityContext):
 
     entity:      type[IEntity]
-    preexisting: pd.DataFrame
     N:           int
+    preexisting: pd.DataFrame = field(default_factory=pd.DataFrame)
     generated:   pd.DataFrame = field(default_factory=pd.DataFrame)
 
 

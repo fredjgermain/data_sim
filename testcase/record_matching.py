@@ -45,9 +45,9 @@ class Student(Entity):
 
 
 entities = {
-    School:       EntityContext(School,    pd.DataFrame(),   N=12), 
-    Teacher:      EntityContext(Teacher,   pd.DataFrame(),   N=200), 
-    Student:      EntityContext(Student,   pd.DataFrame(),   N=5000), 
+    School:       EntityContext(School,   N=12), 
+    Teacher:      EntityContext(Teacher,  N=200), 
+    Student:      EntityContext(Student,  N=5000), 
 } 
 
 

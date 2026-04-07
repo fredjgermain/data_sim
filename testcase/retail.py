@@ -85,9 +85,9 @@ df_region_pre = pd.DataFrame({
 # ---------------------------------------------------------------------------
 
 entities = {
-    Region:      EntityContext(Region,      df_region_pre,        N=8),
-    Customer:    EntityContext(Customer,    pd.DataFrame(),        N=200),
-    Transaction: EntityContext(Transaction, pd.DataFrame(),        N=1000),
+    Region:      EntityContext(Region,      preexisting=df_region_pre,        N=8),
+    Customer:    EntityContext(Customer,    N=200),
+    Transaction: EntityContext(Transaction, N=1000),
 }
 
 sim = DataSimulator(entities) 
