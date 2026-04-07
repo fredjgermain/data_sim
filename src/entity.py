@@ -45,6 +45,15 @@ class EntityField(IEntityField):
 # Entity
 # ---------------------------------------------------------------------------
 class Entity(IEntity):
+    
+    @classmethod
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if cls.__bases__ != (Entity,):
+            raise TypeError(
+                f"'{cls.__name__}' cannot subclass '{cls.__bases__[0].__name__}' — "
+                "only direct subclasses of Entity are allowed."
+            )
 
     @classmethod
     def inspect(cls) -> dict[str, IEntityField]: 

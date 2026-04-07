@@ -1,8 +1,7 @@
 import string 
 import numpy as np 
-import pandas as pd
-from typing import Literal
-
+import pandas as pd 
+from typing import Literal 
 
 
 
@@ -55,7 +54,7 @@ def inject_duplicates(
   
   serie = serie.copy()
   rng = np.random.default_rng(seed)
-  mask = pd.Series(rng.random(size=len(serie)) < prob)
+  mask = rng.random(size=len(serie)) < prob
   n = mask.sum()
   if n == 0:
       return serie
@@ -76,7 +75,7 @@ def inject_missings(
   
   serie = serie.copy()
   rng = np.random.default_rng(seed)
-  mask = pd.Series(rng.random(size=len(serie)) < prob)
+  mask = rng.random(size=len(serie)) < prob
   serie[mask] = None
   return serie
 

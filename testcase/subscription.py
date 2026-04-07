@@ -104,7 +104,7 @@ class Subscription(Entity):
                  )]
   customer_id:    Annotated[int, ForeignKey(Customer)]
   complaints_N:   Annotated[int, GenPoisson(mean=0.4)]
-  res_time:       Annotated[int, CustomGen(res_time_func)]
+  resolution_time:       Annotated[int, CustomGen(res_time_func)]
   
 
 entities = {
@@ -121,6 +121,8 @@ sim = DataSimulator(entities)
 results = sim.simulate() 
 
 for e in entities.keys(): 
-  print(results[e].head()) 
+  print(e.__name__)
+  print(results[e].head(10)) 
+  print()
 
 #print(results[e][['complaints_N', 'res_time']].sort_values(by=['complaints_N'])) 

@@ -1,8 +1,8 @@
 import pandas as pd 
 from dataclasses import dataclass, field 
 
-from src.annotations.primaries import PrimaryKey, CreationTime 
-from src.interface import IEntity, IEntityContext, IEntityField 
+#from src.annotations.primaries import PrimaryKey, CreationTime 
+from src.interface import IEntity, IEntityContext
 
 
 
@@ -45,7 +45,8 @@ class EntityContext(IEntityContext):
       
       flds = self.entity.get(selection)
       selection = [ f.name for f in flds if f.name in list(df.columns)]
-      if not selection:
-        raise KeyError(f"None of the selected fields were found in the DataFrame.")
+      if not selection: 
+        return pd.DataFrame() 
+        #raise KeyError(f"None of the selected fields were found in the DataFrame.")
       return df[selection]
 

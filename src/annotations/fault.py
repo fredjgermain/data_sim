@@ -80,7 +80,7 @@ class Sentinel(IFault):
 class Outlier(IFault):
     prob: float = 0.03
     seed: int | None = None
-    magnitude: float = 3.0,
+    magnitude: float = 3.0
     direction: Literal['both', 'up', 'down'] = 'both'
     
     def inject(self, ctx:FaultCtx) -> pd.Series:
