@@ -1,6 +1,16 @@
+
 import numpy as np 
-import pandas as pd 
+import pandas as pd
+import uuid
+ 
 from scipy.stats import skewnorm 
+
+
+# ! GENERATE IDS
+def generate_ids(N: int, seed: int) -> pd.Series:
+    rng = np.random.default_rng(seed)
+    uuids = [uuid.UUID(int=rng.integers(0, 2**128).item()) for _ in range(N)]
+    return pd.Series([str(u) for u in uuids], dtype="string")
 
 
 # ! GENERATE numerical values 
@@ -56,3 +66,15 @@ def generate_time(seed, start: pd.Series, end: pd.Series) -> pd.Series:
   random_s = (rng.random(len(start)) * (ranges_s + 1)).astype(int)
   return start + pd.to_timedelta(random_s, unit='s')
 
+
+def generate_date_offset(
+    seed: int,
+    reference: pd.Series,
+    offset_years: float,
+    spread_years: float,
+) -> pd.Series:
+    rng = np.random.default_rng(seed)
+    offset_days = int(offset_years * 365.25)
+    spread_days = int(spread_years * 365.25)
+    random_days = rng.integers(-spread_days, spread_days + 1, size=len(reference))
+    return reference + pd.to_timedelta(offset_days + random_days, unit="D")

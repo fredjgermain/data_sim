@@ -35,7 +35,17 @@ class IGen(IAnnotation):
 
 
 
+# ! GENERATE Custom ==========================================
+@dataclass
+class CustomGen(IGen):
+    fn: Callable[[GenCtx], pd.Series]
+    """User-supplied function: (partial_df: DataFrame) -> Series."""
+    
+    def generate(self, ctx: GenCtx) -> pd.Series:
+        return self.fn(ctx)
 
+
+# ! GENERATE from foreign key ===================================
 @dataclass 
 class FromForeignKey(IGen): 
   foreignkey:str 
@@ -46,6 +56,69 @@ class FromForeignKey(IGen):
     return merged[self.foreignfield] 
 
 
+
+# ! GENERATE date and time ==========================================
+@dataclass 
+class GenDate(IGen):
+  start: datetime.datetime
+  end: datetime.datetime
+    
+  def generate(self, ctx:GenCtx) -> pd.Series: 
+      start = pd.Series([self.start] * ctx.N) 
+      end = pd.Series([self.end] * ctx.N) 
+      return generator.generate_date(self.seed, start, end) 
+
+
+@dataclass 
+class GenTime(IGen):
+  start: datetime.datetime
+  end: datetime.datetime
+    
+  def generate(self, ctx:GenCtx) -> pd.Series: 
+    start = pd.Series([self.start] * ctx.N) 
+    end = pd.Series([self.end] * ctx.N) 
+    return generator.generate_time(self.seed, start, end) 
+
+
+
+# ! GENERATE date and time ==========================================
+@dataclass
+class GenCategorical(IGen):
+    categories: list
+    weight: list | None = None 
+    
+    def generate(self, ctx:GenCtx):
+        return generator.generate_categorical(ctx.N, self.seed, self.categories, self.weight)
+
+
+
+
+# ! GENERATE Faker ==========================================
+@dataclass
+class GenFaker(IGen):
+    provider: str
+
+    def generate(self, ctx: GenCtx) -> pd.Series:
+        fkr = faker.Faker()
+        provider_fn = getattr(fkr, self.provider, None)
+        if provider_fn is None:
+            raise AttributeError(
+                f"Faker has no provider '{self.provider}'."
+            )
+        return pd.Series([provider_fn() for _ in range(ctx.N)])
+
+
+# ! GENERATE Pattern ==========================================
+@dataclass
+class GenPattern(IGen):
+    pattern: str
+
+    def generate(self, ctx: GenCtx) -> pd.Series:
+        return pd.Series([rstr.xeger(self.pattern) for _ in range(ctx.N)])
+
+
+
+# ! GENERATE NUMERICAL =========================================
 @dataclass
 class GenNum(IGen): 
     min: float | None = None 
@@ -127,70 +200,7 @@ class GenExponential(GenNum):
 
 
 
-@dataclass 
-class GenDate(IGen):
-    start: datetime.datetime
-    end: datetime.datetime
-    
-    def generate(self, ctx:GenCtx) -> pd.Series: 
-        start = pd.Series([self.start] * ctx.N) 
-        end = pd.Series([self.end] * ctx.N) 
-        return generator.generate_date(self.seed, start, end) 
-
-
-@dataclass 
-class GenTime(IGen):
-    start: datetime.datetime
-    end: datetime.datetime
-    
-    def generate(self, ctx:GenCtx) -> pd.Series: 
-        start = pd.Series([self.start] * ctx.N) 
-        end = pd.Series([self.end] * ctx.N) 
-        return generator.generate_time(self.seed, start, end)
-    
-
-@dataclass
-class GenCategorical(IGen):
-    categories: list
-    weight: list | None = None 
-    
-    def generate(self, ctx:GenCtx):
-        return generator.generate_categorical(ctx.N, self.seed, self.categories, self.weight)
-
-
-@dataclass
-class CustomGen(IGen):
-    fn: Callable[[GenCtx], pd.Series]
-    """User-supplied function: (partial_df: DataFrame) -> Series."""
-    
-    def generate(self, ctx: GenCtx) -> pd.Series:
-        return self.fn(ctx)
-
-
-@dataclass
-class GenFaker(IGen):
-    provider: str
-
-    def generate(self, ctx: GenCtx) -> pd.Series:
-        fkr = faker.Faker()
-        provider_fn = getattr(fkr, self.provider, None)
-        if provider_fn is None:
-            raise AttributeError(
-                f"Faker has no provider '{self.provider}'."
-            )
-        return pd.Series([provider_fn() for _ in range(ctx.N)])
-
-
-@dataclass
-class GenPattern(IGen):
-    pattern: str
-
-    def generate(self, ctx: GenCtx) -> pd.Series:
-        return pd.Series([rstr.xeger(self.pattern) for _ in range(ctx.N)])
-
-
-
-# ! transforms serie after generation 
+# ! TRANSFORM ========================================================
 @dataclass 
 class Transformer(IAnnotation):
     fn: Callable[[pd.Series], pd.Series]
