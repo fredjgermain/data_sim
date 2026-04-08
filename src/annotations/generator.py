@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Callable
 import datetime
 
-from src.interface import IEntity, IAnnotation 
+from src.interface import IEntity, IAnnotation, IEntityContext
 from src.annotations.primaries import ForeignKey, PrimaryKey
 from src.utils import generator 
 
@@ -16,8 +16,7 @@ class GenCtx:
   N:int 
   entity:type[IEntity] 
   current_data:pd.DataFrame = field(default_factory=pd.DataFrame) 
-  foreign_datas:dict[type[IEntity], pd.DataFrame] = field(default_factory=dict) 
-  
+  foreign_datas:dict[type[IEntity], pd.DataFrame] = field(default_factory=dict)   
   
   # ! helper function for CustomGen
   def from_foreign(self, foreignkey:str, foreignfields:list[str]) -> pd.DataFrame: 

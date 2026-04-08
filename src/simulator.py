@@ -3,12 +3,13 @@ from dataclasses import dataclass, field
 import datetime
 
 from src.interface import IAnnotation 
-from src.annotations.primaries import (
-    PkCtx, PrimaryKey, FkCtx, ForeignKey, CtCtx, CreationTime, aggregate_creation_time 
-    )
-from src.annotations.standardgen import IGen, GenCtx, Transformer 
+from src.annotations.primaries import ( 
+    PkCtx, PrimaryKey, FkCtx, ForeignKey, CtCtx, CreationTime 
+    ) 
+from src.annotations.generator import IGen, GenCtx, Transformer 
 from src.annotations.fault import IFault, FaultCtx 
 from src.annotations.validation import IValid, ValidCtx 
+from src.annotations.factory_ctx import FactoryCtx
 
 from src.context import EntityContext 
 from src.entity import Entity, EntityField 
@@ -72,7 +73,7 @@ class DataSimulator:
             if pk_fld is None: 
                 continue 
             ann = pk_fld.get(PrimaryKey) 
-            pk_ctx = PkCtx.make_ctx(ctx)
+            pk_ctx = FactoryCtx.make_pkctx(ctx) 
             try:
                 serie = ann.generate(pk_ctx) 
                 ctx.generated[pk_fld.name] = self._coerce_column(serie, pk_fld.base_type) 
@@ -85,7 +86,7 @@ class DataSimulator:
         for entity, ctx in self.entities.items(): 
             for fld in entity.get([ForeignKey]): 
                 ann = fld.get(ForeignKey) 
-                fk_ctx = FkCtx.make_ctx(fld.name, ctx, self.entities)
+                fk_ctx = FactoryCtx.make_fkctx(fld.name, ctx, self.entities)
                 try:
                     serie = ann.generate(fk_ctx) 
                     ctx.generated[fld.name] = self._coerce_column(serie, fld.base_type) 
@@ -99,15 +100,8 @@ class DataSimulator:
             ct_fld = entity.get(CreationTime) 
             if ct_fld is None:
                 continue
-            
             ann = ct_fld.get(CreationTime) 
-            # ! Aggregate creation time to find lower bound 
-            cdata = ctx.get_data(preexisting=False) 
-            fdatas = { e:d.get_data() for e,d in self.entities.items() } 
-            
-            agg_creation_time = aggregate_creation_time(ctx.entity, cdata, fdatas ) 
-                        
-            ct_ctx = CtCtx(ct_fld.name, ctx.N, entity, agg_creation_time)
+            ct_ctx = FactoryCtx.make_ctctx(ct_fld.name, ctx, self.entities) 
             try:
                 serie = ann.generate(ct_ctx) 
                 ctx.generated[ct_fld.name] = self._coerce_column(serie, ct_fld.base_type) 
@@ -115,22 +109,17 @@ class DataSimulator:
             except Exception as e: 
                 self._update_report(entity, ct_fld, ann, error=e) 
 
-
     # ! pass 4 
     def _pass_standard_generation(self) -> None: 
         for entity, ctx in self.entities.items(): 
-            for fld in entity.get([IGen]):
-                current_data = ctx.get_data(preexisting=False) 
-                foreign_data = { e:c.get_data() for e, c in self.entities.items() } 
-                gen_ctx = GenCtx(name=fld.name, N=ctx.N, entity=entity, current_data=current_data, foreign_datas=foreign_data) 
+            for fld in entity.get([IGen]): 
                 ann_gen = fld.get(IGen) 
                 ann_trf = fld.get(Transformer) 
-                
+                gen_ctx = FactoryCtx.make_genctx(fld.name, ctx, self.entities) 
                 try:
                     serie = ann_gen.generate(gen_ctx) 
                     if ann_trf:
                         serie = ann_trf.transform(serie) 
-
                     ctx.generated[fld.name] = self._coerce_column(serie, fld.base_type) 
                     self._update_report(entity, fld, ann_gen, serie) 
                 except Exception as e:
@@ -140,10 +129,8 @@ class DataSimulator:
     def _pass_fault_injection(self) -> None:
         for entity, ctx in self.entities.items():
             for fld in entity.get([IFault]): 
-                # get Standard generator annotation 
                 for ann in fld.get_many(IFault): 
-                    current_serie = ctx.get_data(preexisting=False)[fld.name] 
-                    fault_ctx = FaultCtx(name=fld.name, current_serie=current_serie) 
+                    fault_ctx = FactoryCtx.make_faultctx(fld.name, ctx) 
                     try:
                         serie = ann.inject(fault_ctx) 
                         ctx.generated[fld.name] = serie 
@@ -155,8 +142,7 @@ class DataSimulator:
     def _pass_validation(self) -> None: 
         for entity, ctx in self.entities.items(): 
             for fld in entity.get([IValid]): 
-                current_data = ctx.get_data(preexisting=False)[fld.name]
-                valid_ctx = ValidCtx(name=fld.name, current_serie=current_data) 
+                valid_ctx = FactoryCtx.make_validctx(fld.name, ctx)
                 for ann in fld.get_many(IValid): 
                     try:
                         res = ann.validate(valid_ctx) 

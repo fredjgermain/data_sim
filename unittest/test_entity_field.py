@@ -12,7 +12,7 @@ Covered methods:
 import pytest
 from src.entity import EntityField
 from src.annotations.primaries import PrimaryKey 
-from src.annotations.standardgen import GenNormal, GenUniform, IGen, IGen, Transformer
+from src.annotations.generator import GenNormal, GenUniform, IGen, IGen, Transformer
 from src.annotations.validation import Unique
 from src.annotations.fault import Nullify, IFault, Misspell
 

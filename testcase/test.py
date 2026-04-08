@@ -9,7 +9,7 @@ from src.entity import Entity
 from src.context import EntityContext
 from src.simulator import DataSimulator
 
-from src.annotations.standardgen import (
+from src.annotations.generator import (
     GenNormal, GenUniform, GenFaker, GenPattern, CustomGen, GenCategorical, 
 )
 from src.annotations.primaries import (PrimaryKey, CreationTime, ForeignKey, PkCtx)
@@ -41,19 +41,14 @@ df_region_pre = pd.DataFrame({
 
 ctx = EntityContext(Region, N=8, preexisting=df_region_pre)
 
-pk_ctx = PkCtx.make_ctx(ctx) 
+serie = pd.Series([1,2,3,4], name='id') 
+df = pd.DataFrame({'id':[1,2,3,4], 'name':['a','b','c','d']})
+df.index = [12,14,10,18] 
 
-print(all(pk_ctx.pk_values == df_region_pre['region_id']) )
+df_merged = pd.merge(serie, df, left_on=serie.name, right_on='id', how='left')
 
-df_test = df_region_pre[['region_id']].copy() 
-#df_test.columns = ['region_id', 'test1', 'test2'] 
+print(type(serie.name))
 
-pk_serie = df_region_pre["region_id"] 
-serie = pd.Series() 
-serie.name = 'test_column' 
-print(f"is serie empty ? {serie.name} {serie.empty} ") 
-
-
-df = pd.DataFrame(columns=['var1', 'var2']) 
-print(df.columns) 
-
+print(serie)
+print(df)
+print(df_merged)

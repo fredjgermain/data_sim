@@ -13,7 +13,7 @@ from typing import Annotated
 from src.entity import Entity
 from src.context import EntityContext
 from src.annotations.primaries import PrimaryKey, CreationTime
-from src.annotations.standardgen import GenNormal
+from src.annotations.generator import GenNormal
 
 
 @dataclass

@@ -10,8 +10,8 @@ from src.entity import Entity
 from src.context import EntityContext
 from src.simulator import DataSimulator
 
-from src.annotations.standardgen import GenCtx, IGen
-from src.annotations.standardgen import (
+from src.annotations.generator import GenCtx, IGen
+from src.annotations.generator import (
     GenNormal, GenUniform, GenFaker, GenPattern, 
     CustomGen, GenCategorical, GenGamma, GenPoisson, 
     Transformer, FromForeignKey 

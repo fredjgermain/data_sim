@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from src.context import EntityContext
 from src.entity import Entity
 from src.annotations.primaries import PrimaryKey, CreationTime
-from src.annotations.standardgen import GenNormal
+from src.annotations.generator import GenNormal
 
 
 # ---------------------------------------------------------------------------

@@ -20,7 +20,7 @@ from dataclasses import dataclass
 
 from src.entity import Entity, EntityField
 from src.annotations.primaries import PrimaryKey, CreationTime
-from src.annotations.standardgen import GenNormal, GenUniform, GenFaker, IGen, IGen
+from src.annotations.generator import GenNormal, GenUniform, GenFaker, IGen, IGen
 from src.annotations.validation import Unique
 from src.annotations.fault import Nullify
 from src.annotations.fault import IFault
