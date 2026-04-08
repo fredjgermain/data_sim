@@ -155,8 +155,7 @@ class GenCategorical(IGen):
     weight: list | None = None 
     
     def generate(self, ctx:GenCtx):
-        return generator.generate_categorical(
-            ctx.N, self.seed, self.categories, self.weight)
+        return generator.generate_categorical(ctx.N, self.seed, self.categories, self.weight)
 
 
 @dataclass

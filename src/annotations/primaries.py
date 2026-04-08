@@ -3,6 +3,7 @@
 # ---------------------------------------------------------------------------
 
 import pandas as pd
+import numpy as np
 import datetime
 from dataclasses import dataclass, field
 from typing import Callable
@@ -23,6 +24,7 @@ class PkCtx:
 @dataclass
 class PrimaryKey(IAnnotation):
     fn: Callable[[pd.DataFrame], pd.Series] | None = None
+    seed: int | None = None
 
     def generate(self, ctx:PkCtx) -> pd.Series:
         if self.fn:
@@ -52,13 +54,15 @@ class FkCtx:
 @dataclass
 class ForeignKey(IAnnotation):
     target: type[IEntity]
+    seed: int | None = None
 
     def generate(self, ctx: FkCtx) -> pd.Series: 
-        if ctx.fk_values is None or ctx.fk_values.empty: 
-            raise ValueError( 
-                f"ForeignKey target '{self.target.__name__}' has no data to sample from." 
-            ) 
-        return ctx.fk_values.sample(n=ctx.N, replace=True).reset_index(drop=True) 
+      if ctx.fk_values is None or ctx.fk_values.empty: 
+        raise ValueError(
+          f"ForeignKey target '{self.target.__name__}' has no data to sample from."
+        )
+      rng = np.random.default_rng(self.seed)
+      return pd.Series(rng.choice(ctx.fk_values, size=ctx.N)).reset_index(drop=True) 
 
 
 
