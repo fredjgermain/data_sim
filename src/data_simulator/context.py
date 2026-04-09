@@ -1,7 +1,7 @@
 import pandas as pd 
 from dataclasses import dataclass, field 
 
-from src.interface import IEntity, IEntityContext
+from data_simulator.interface import IEntity, IEntityContext
 
 
 

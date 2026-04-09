@@ -10,10 +10,10 @@ import pytest
 from dataclasses import dataclass
 from typing import Annotated
 
-from src.entity import Entity
-from src.context import EntityContext
-from src.annotations.primaries import PrimaryKey, CreationTime
-from src.annotations.generator import GenNormal
+from entity import Entity
+from context import EntityContext
+from annotations.primaries import PrimaryKey, CreationTime
+from annotations.generator import GenNormal
 
 
 @dataclass

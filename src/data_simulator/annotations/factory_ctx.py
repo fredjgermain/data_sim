@@ -1,12 +1,12 @@
 import pandas as pd
 
-from src.annotations.primaries import (
+from data_simulator.annotations.primaries import (
   CreationTime, ForeignKey, PrimaryKey, 
   PkCtx, FkCtx, CtCtx)
-from src.annotations.generator import GenCtx
-from src.annotations.fault import FaultCtx
-from src.annotations.validation import ValidCtx
-from src.interface import IEntity, IEntityContext
+from data_simulator.annotations.generator import GenCtx
+from data_simulator.annotations.fault import FaultCtx
+from data_simulator.annotations.validation import ValidCtx
+from data_simulator.interface import IEntity, IEntityContext
 
 
 

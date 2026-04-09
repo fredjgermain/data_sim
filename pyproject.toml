@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "data_simulator"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "pandas", 
+    "numpy", 
+    "scipy", 
+    "rstr", 
+    "faker", 
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

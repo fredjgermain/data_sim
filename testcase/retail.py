@@ -1,19 +1,23 @@
+# import sys
+# import os
+# sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
 import datetime
 import pandas as pd
 from dataclasses import dataclass
 from typing import Annotated
 
-from src.annotations.primaries import PrimaryKey
-from src.annotations.validation import Unique
-from src.entity import Entity
-from src.context import EntityContext
-from src.simulator import DataSimulator
+from data_simulator.annotations.primaries import PrimaryKey
+from data_simulator.annotations.validation import Unique
+from data_simulator.entity import Entity
+from data_simulator.context import EntityContext
+from data_simulator.simulator import DataSimulator
 
-from src.annotations.generator import (
+from data_simulator.annotations.generator import (
     GenNormal, GenUniform, GenFaker, GenPattern, CustomGen, GenCategorical, 
 )
-from src.annotations.primaries import (PrimaryKey, CreationTime, ForeignKey)
-from src.annotations.fault import Nullify, Duplicate
+from data_simulator.annotations.primaries import (PrimaryKey, CreationTime, ForeignKey)
+from data_simulator.annotations.fault import Nullify, Duplicate
 
 
 # ---------------------------------------------------------------------------
@@ -91,28 +95,11 @@ entities = {
 }
 
 sim = DataSimulator(entities) 
-results = sim.simulate() 
+sim.simulate() 
 
-# for k, rep in sim.report.items():
-#     print(f"=== {k} ===") 
-#     for fld, frep in rep.fld_report.items(): 
-#         print(fld, [ (a,len(s)) for a, s in frep.results.items()]) 
-#     print()
+gens = sim.generated
 
-# ---------------------------------------------------------------------------
-# Inspect results
-# ---------------------------------------------------------------------------
+for e, data in gens.items():
+  print(f'=== {e.__name__} === {data.shape}') 
+  print(data.head()) 
 
-# print("=== Region ===")
-# print(results[Region].head())
-# print(results[Region].shape)
-
-# print("=== Customer ===")
-# print(results[Customer].head())
-# print(results[Customer].shape)
-
-# print("=== Transaction ===")
-# print(results[Transaction].head())
-# print(results[Transaction].shape)
-
-sim.print_report()

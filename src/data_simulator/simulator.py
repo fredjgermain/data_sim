@@ -3,17 +3,15 @@ from dataclasses import dataclass, field
 import datetime
 from typing import Any
 
-from src.interface import IAnnotation 
-from src.annotations.primaries import ( 
-    PkCtx, PrimaryKey, FkCtx, ForeignKey, CtCtx, CreationTime 
-    ) 
-from src.annotations.generator import IGen, GenCtx, Transformer 
-from src.annotations.fault import IFault, FaultCtx 
-from src.annotations.validation import IValid, ValidCtx 
-from src.annotations.factory_ctx import FactoryCtx
+from data_simulator.interface import IAnnotation 
+from data_simulator.annotations.primaries import ( PrimaryKey, ForeignKey, CreationTime ) 
+from data_simulator.annotations.generator import IGen, Transformer 
+from data_simulator.annotations.fault import IFault 
+from data_simulator.annotations.validation import IValid
+from data_simulator.annotations.factory_ctx import FactoryCtx
 
-from src.context import EntityContext 
-from src.entity import Entity, EntityField 
+from data_simulator.context import EntityContext 
+from data_simulator.entity import Entity, EntityField 
 
 
 
@@ -38,7 +36,8 @@ class FieldReport:
 @dataclass 
 class DataSimulator: 
     entities: dict[type[Entity], EntityContext] 
-    
+    preexisting: dict[type[Entity], pd.DataFrame] = field(default_factory=dict) 
+    generated: dict[type[Entity], pd.DataFrame] = field(default_factory=dict) 
     report: dict[type[Entity], EntityReport] = field(default_factory=dict) 
     
     def __post_init__(self) -> None:
@@ -65,6 +64,8 @@ class DataSimulator:
         self._pass_fault_injection() # ! pass 5 
         self._pass_validation() # ! pass 6 
         
+        self.preexisting = {entity: ctx.get_data(generated=False) for entity, ctx in self.entities.items()}
+        self.generated = {entity: ctx.get_data(preexisting=False) for entity, ctx in self.entities.items()}
         return {entity: ctx.get_data() for entity, ctx in self.entities.items()}
 
     # ! Pass 1 
@@ -160,7 +161,7 @@ class DataSimulator:
             report.results = result 
         if not error is None:
             report.error = error 
-            
+    
     def print_report(self): 
       for rep in self.report.values(): 
         print(rep.entity_name) 

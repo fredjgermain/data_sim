@@ -5,9 +5,9 @@ from dataclasses import dataclass, field
 from typing import Callable
 import datetime
 
-from src.interface import IEntity, IAnnotation, IEntityContext
-from src.annotations.primaries import ForeignKey, PrimaryKey
-from src.utils import generator 
+from data_simulator.interface import IEntity, IAnnotation, IEntityContext
+from data_simulator.annotations.primaries import ForeignKey, PrimaryKey
+from data_simulator.utils import generator 
 
 
 @dataclass

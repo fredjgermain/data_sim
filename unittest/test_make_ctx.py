@@ -6,10 +6,10 @@ from typing import Annotated
 from dataclasses import dataclass
 
 
-from src.context import EntityContext
-from src.interface import IEntity, IEntityContext
-from src.entity import Entity, EntityField
-from src.annotations.primaries import PrimaryKey, ForeignKey, CreationTime, PkCtx, FkCtx, CtCtx
+from context import EntityContext
+from interface import IEntity, IEntityContext
+from entity import Entity, EntityField
+from annotations.primaries import PrimaryKey, ForeignKey, CreationTime, PkCtx, FkCtx, CtCtx
 
 
 

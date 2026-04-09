@@ -1,7 +1,7 @@
 import pandas as pd
 from dataclasses import dataclass, field
 
-from src.interface import IAnnotation
+from data_simulator.interface import IAnnotation
 
 
 

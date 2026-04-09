@@ -3,17 +3,17 @@ import pandas as pd
 from dataclasses import dataclass
 from typing import Annotated
 
-from src.annotations.primaries import PrimaryKey
-from src.annotations.validation import Unique
-from src.entity import Entity
-from src.context import EntityContext
-from src.simulator import DataSimulator
+from data_simulator.annotations.primaries import PrimaryKey
+from data_simulator.annotations.validation import Unique
+from data_simulator.entity import Entity
+from data_simulator.context import EntityContext
+from data_simulator.simulator import DataSimulator
 
-from src.annotations.generator import (
+from data_simulator.annotations.generator import (
     GenNormal, GenUniform, GenFaker, GenPattern, CustomGen, GenCategorical, 
 )
-from src.annotations.primaries import (PrimaryKey, CreationTime, ForeignKey, PkCtx)
-from src.annotations.fault import Nullify, Duplicate
+from data_simulator.annotations.primaries import (PrimaryKey, CreationTime, ForeignKey, PkCtx)
+from data_simulator.annotations.fault import Nullify, Duplicate
 
 
 

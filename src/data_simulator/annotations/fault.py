@@ -2,8 +2,8 @@ import pandas as pd
 from dataclasses import dataclass, field
 from typing import Callable, Any, Literal
 
-from src.interface import IAnnotation
-from src.utils import fault
+from data_simulator.interface import IAnnotation
+from data_simulator.utils import fault
 
 
 @dataclass

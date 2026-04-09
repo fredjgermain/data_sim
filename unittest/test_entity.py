@@ -18,12 +18,12 @@ import pytest
 from typing import Annotated
 from dataclasses import dataclass
 
-from src.entity import Entity, EntityField
-from src.annotations.primaries import PrimaryKey, CreationTime
-from src.annotations.generator import GenNormal, GenUniform, GenFaker, IGen, IGen
-from src.annotations.validation import Unique
-from src.annotations.fault import Nullify
-from src.annotations.fault import IFault
+from entity import Entity, EntityField
+from annotations.primaries import PrimaryKey, CreationTime
+from annotations.generator import GenNormal, GenUniform, GenFaker, IGen, IGen
+from annotations.validation import Unique
+from annotations.fault import Nullify
+from annotations.fault import IFault
 
 
 # ---------------------------------------------------------------------------

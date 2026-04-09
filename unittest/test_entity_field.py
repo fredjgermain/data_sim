@@ -10,11 +10,11 @@ Covered methods:
 """
 
 import pytest
-from src.entity import EntityField
-from src.annotations.primaries import PrimaryKey 
-from src.annotations.generator import GenNormal, GenUniform, IGen, IGen, Transformer
-from src.annotations.validation import Unique
-from src.annotations.fault import Nullify, IFault, Misspell
+from entity import EntityField
+from annotations.primaries import PrimaryKey 
+from annotations.generator import GenNormal, GenUniform, IGen, IGen, Transformer
+from annotations.validation import Unique
+from annotations.fault import Nullify, IFault, Misspell
 
 
 # ---------------------------------------------------------------------------

@@ -8,8 +8,8 @@ import datetime
 from dataclasses import dataclass, field
 from typing import Callable
 
-from src.interface import IEntity, IAnnotation, IEntityContext 
-from src.utils import generator 
+from data_simulator.interface import IEntity, IAnnotation, IEntityContext 
+from data_simulator.utils import generator 
 
 
 
