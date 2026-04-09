@@ -1,6 +1,7 @@
 import pandas as pd 
-from dataclasses import dataclass, field 
+from dataclasses import dataclass, field
 import datetime
+from typing import Any
 
 from src.interface import IAnnotation 
 from src.annotations.primaries import ( 
@@ -26,8 +27,8 @@ class EntityReport:
 class FieldReport:
     fld_name: str 
     expected_N: int 
-    results: dict[str, pd.Series] = field(default_factory=dict) 
-    error: dict[str, pd.Series] = field(default_factory=dict) 
+    results: pd.Series = field(default_factory=dict) 
+    error: Any | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -156,16 +157,18 @@ class DataSimulator:
         report = self.report[entity].fld_report[fld.name] 
         k = anno.__class__.__name__ 
         if not result is None:
-            report.results[k] = result 
+            report.results = result 
         if not error is None:
-            report.error[k] = error 
-
-
-    def _resolve_ctx(self, entity: type[Entity]) -> EntityContext:
-        if entity not in self.entities:
-            raise KeyError(f"Entity '{entity.__name__}' is not registered in this DataSimulator.")
-        return self.entities[entity]
-
+            report.error = error 
+            
+    def print_report(self): 
+      for rep in self.report.values(): 
+        print(rep.entity_name) 
+        for f in rep.fld_report.values(): 
+          if f.error: 
+            print(f"\t{f.fld_name}, error: {f.error}") 
+          else:
+            print(f"\t{f.fld_name}, \t\t N:{f.expected_N}/{len(f.results)}") 
 
     def _coerce_column(self, series: pd.Series, base_type: type) -> pd.Series:
         type_map = {

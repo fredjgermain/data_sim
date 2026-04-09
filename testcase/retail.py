@@ -103,14 +103,16 @@ results = sim.simulate()
 # Inspect results
 # ---------------------------------------------------------------------------
 
-print("=== Region ===")
-print(results[Region].head())
-print(results[Region].shape)
+# print("=== Region ===")
+# print(results[Region].head())
+# print(results[Region].shape)
 
-print("=== Customer ===")
-print(results[Customer].head())
-print(results[Customer].shape)
+# print("=== Customer ===")
+# print(results[Customer].head())
+# print(results[Customer].shape)
 
-print("=== Transaction ===")
-print(results[Transaction].head())
-print(results[Transaction].shape)
+# print("=== Transaction ===")
+# print(results[Transaction].head())
+# print(results[Transaction].shape)
+
+sim.print_report()
