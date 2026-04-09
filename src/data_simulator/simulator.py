@@ -12,6 +12,7 @@ from data_simulator.annotations.factory_ctx import FactoryCtx
 
 from data_simulator.context import EntityContext 
 from data_simulator.entity import Entity, EntityField 
+from data_simulator.faultmap import FaultMap
 
 
 
@@ -61,12 +62,36 @@ class DataSimulator:
         self._pass_foreign_keys() # ! pass 2 
         self._pass_creation_times() # ! pass 3 
         self._pass_standard_generation() # ! pass 4 
-        self._pass_fault_injection() # ! pass 5 
-        self._pass_validation() # ! pass 6 
         
         self.preexisting = {entity: ctx.get_data(generated=False) for entity, ctx in self.entities.items()}
         self.generated = {entity: ctx.get_data(preexisting=False) for entity, ctx in self.entities.items()}
         return {entity: ctx.get_data() for entity, ctx in self.entities.items()}
+
+    
+    def fault_injection(self, fault_maps:dict[type[Entity], type[FaultMap]]) -> None: 
+      for entity, fault_map in fault_maps.items(): 
+        ctx = self.entities[entity] 
+        for fld in fault_map.get([IFault]): 
+          for ann in fld.get_many(IFault): 
+            fault_ctx = FactoryCtx.make_faultctx(fld.name, ctx) 
+            try:
+              serie = ann.inject(fault_ctx) 
+              ctx.generated[fld.name] = serie 
+              self._update_report(entity, fld, ann, serie) 
+            except Exception as e: 
+              self._update_report(entity, fld, ann, error=e) 
+  
+      
+    def validation(self) -> None: 
+      for entity, ctx in self.entities.items(): 
+        for fld in entity.get([IValid]): 
+          valid_ctx = FactoryCtx.make_validctx(fld.name, ctx)
+          for ann in fld.get_many(IValid): 
+            try:
+              res = ann.validate(valid_ctx) 
+              self._update_report(entity, fld, ann, res.invalid_values) 
+            except Exception as e: 
+              self._update_report(entity, fld, ann, error=e) 
 
     # ! Pass 1 
     def _pass_primary_keys(self) -> None: 
@@ -126,32 +151,6 @@ class DataSimulator:
                     self._update_report(entity, fld, ann_gen, serie) 
                 except Exception as e:
                     self._update_report(entity, fld, ann_gen, error=e) 
-    
-    # ! Pass 5: Fault injection
-    def _pass_fault_injection(self) -> None:
-        for entity, ctx in self.entities.items():
-            for fld in entity.get([IFault]): 
-                for ann in fld.get_many(IFault): 
-                    fault_ctx = FactoryCtx.make_faultctx(fld.name, ctx) 
-                    try:
-                        serie = ann.inject(fault_ctx) 
-                        ctx.generated[fld.name] = serie 
-                        self._update_report(entity, fld, ann, serie) 
-                    except Exception as e: 
-                        self._update_report(entity, fld, ann, error=e) 
-    
-    # ! Pass 6: Validation 
-    def _pass_validation(self) -> None: 
-        for entity, ctx in self.entities.items(): 
-            for fld in entity.get([IValid]): 
-                valid_ctx = FactoryCtx.make_validctx(fld.name, ctx)
-                for ann in fld.get_many(IValid): 
-                    try:
-                        res = ann.validate(valid_ctx) 
-                        self._update_report(entity, fld, ann, res.invalid_values) 
-                    except Exception as e: 
-                        self._update_report(entity, fld, ann, error=e) 
-
 
     # Internal helpers ==================================== 
     def _update_report(self, entity:type[Entity], fld:EntityField, anno:IAnnotation, result:pd.Series = None, error:Exception = None): 

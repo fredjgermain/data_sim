@@ -4,50 +4,12 @@ from typing import Annotated, get_args, get_origin, overload
 from dataclasses import dataclass
 from data_simulator.annotations.primaries import PrimaryKey, CreationTime 
 from data_simulator.interface import IEntity, IEntityField, IAnnotation 
+from data_simulator.entity import EntityField
 
 
-
-# ---------------------------------------------------------------------------
-# EntityField
-# ---------------------------------------------------------------------------
 @dataclass
-class EntityField(IEntityField):
-    name:        str 
-    base_type:   type 
-    annotations: dict[type[IAnnotation], IAnnotation] 
-    
-    def get[A](self, annotation_type: type[A]) -> A | None:
-        result = self.annotations.get(annotation_type)
-        if result is not None:
-            return result 
-        return next((a for a in self.annotations.values() if isinstance(a, annotation_type)), None) 
-
-    def get_many[A](self, annotation_type: type[A]) -> list[A]:
-        return [ a for a in self.annotations.values() if isinstance(a, annotation_type) ]
-
-    def has(self, *annotation_types: type) -> bool:
-        return any(
-            isinstance(ann, t)
-            for ann in self.annotations.values()
-            for t in annotation_types
-        )
-
-
-
-# ---------------------------------------------------------------------------
-# Entity
-# ---------------------------------------------------------------------------
-class Entity(IEntity):
-    
-    @classmethod
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        if cls.__bases__ != (Entity,):
-            raise TypeError(
-                f"'{cls.__name__}' cannot subclass '{cls.__bases__[0].__name__}' — "
-                "only direct subclasses of Entity are allowed."
-            )
-
+class FaultMap:
+  
     @classmethod
     def inspect(cls) -> dict[str, IEntityField]: 
       fields = {}
@@ -57,7 +19,7 @@ class Entity(IEntity):
             continue
           
           base_type, *anns = get_args(hint) 
-          ann_dict = Entity._parse_annotations(anns) 
+          ann_dict = FaultMap._parse_annotations(anns) 
           fields[name] = EntityField(name=name, base_type=base_type, annotations=ann_dict) 
       return fields 
   
