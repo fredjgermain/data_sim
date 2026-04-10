@@ -18,6 +18,7 @@ from data_simulator.annotations.generator import (
 )
 from data_simulator.annotations.primaries import (PrimaryKey, CreationTime, ForeignKey)
 from data_simulator.annotations.fault import Nullify, Duplicate
+from data_simulator.faultmap import FaultMap
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +55,6 @@ class Customer(Entity):
                      )
                  )]
 
-
 @dataclass
 class Transaction(Entity):
     transaction_id: Annotated[int, PrimaryKey()]
@@ -63,13 +63,20 @@ class Transaction(Entity):
                         end=datetime.datetime(2024, 12, 31),
                     )]
     customer_id:    Annotated[int,   ForeignKey(Customer)]
-    region_id:      Annotated[int,   ForeignKey(Region), Nullify(prob=0.1)]
+    region_id:      Annotated[int,   ForeignKey(Region)]
     amount:         Annotated[float, GenNormal(min=0, mean=150, std=80, rounding=2)]
     quantity:       Annotated[int,   GenUniform(min=1, max=10, rounding=0)]
-    ref:            Annotated[str,   GenPattern(r'TXN-\d{8}'), Unique(), Duplicate(prob=0.1)]
+    ref:            Annotated[str,   GenPattern(r'TXN-\d{8}'), Unique()]
     # fault injections
-    amount_nulls:   Annotated[float, GenNormal(min=0, mean=150, std=80, rounding=2), Nullify(prob=0.03)]
-    ref_dupes:      Annotated[str,   GenPattern(r'[A-Z]{3}-\d{4}'),  Duplicate(prob=0.02)]
+    amount_nulls:   Annotated[float, GenNormal(min=0, mean=150, std=80, rounding=2)]
+    ref_dupes:      Annotated[str,   GenPattern(r'[A-Z]{3}-\d{4}')]
+
+
+
+@dataclass 
+class CustomerFaultMap(FaultMap): 
+  email: Annotated[str, Nullify(0.8)] 
+
 
 
 # ---------------------------------------------------------------------------
@@ -94,12 +101,24 @@ entities = {
     Transaction: EntityContext(Transaction, N=1000),
 }
 
+fault_maps = { 
+  Customer:CustomerFaultMap 
+} 
+
+
+
+
 sim = DataSimulator(entities) 
 sim.simulate() 
+sim.fault_injection(fault_maps) 
 
-gens = sim.generated
+print('testt')
+gens = sim.get_data(preexisting=False)
 
-for e, data in gens.items():
-  print(f'=== {e.__name__} === {data.shape}') 
-  print(data.head()) 
+print(sim._report)
+
+
+# for e, data in gens.items():
+#   print(f'=== {e.__name__} === {data.shape}') 
+#   print(data.head()) 
 
