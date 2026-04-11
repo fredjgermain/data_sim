@@ -8,7 +8,7 @@ import datetime
 from dataclasses import dataclass, field
 from typing import Callable
 
-from data_simulator.interface import IEntity, IAnnotation, IEntityContext 
+from data_simulator.interface import IEntity, IAnnotation 
 from data_simulator.utils import generator 
 
 
@@ -57,10 +57,6 @@ class ForeignKey(IAnnotation):
     seed: int | None = None 
 
     def generate(self, ctx: FkCtx) -> pd.Series: 
-      if ctx.fk_values is None or ctx.fk_values.empty: 
-        raise ValueError(
-          f"ForeignKey target '{self.target.__name__}' has no data to sample from."
-        )
       rng = np.random.default_rng(self.seed)
       return pd.Series(rng.choice(ctx.fk_values, size=ctx.N)).reset_index(drop=True) 
 
@@ -83,9 +79,10 @@ class CreationTime(IAnnotation):
 
     def generate(self, ctx: CtCtx) -> pd.Series:
         if ctx.agg_creation_time.empty:
-            start = pd.Series([self.start] * ctx.N)
+          start = pd.Series([self.start] * ctx.N)
         else:
-            start = ctx.agg_creation_time.clip(lower=self.start)
+          agg_creation_time = ctx.agg_creation_time.fillna(self.start)
+          start = agg_creation_time.clip(lower=self.start)
         
         end = pd.Series([self.end] * ctx.N)
         return generator.generate_date(self.seed, start, end)

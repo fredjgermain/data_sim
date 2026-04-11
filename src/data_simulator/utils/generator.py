@@ -89,6 +89,8 @@ def generate_categorical(N: int, seed, categories: list, weight: list | None = N
 
 # ! GENERATE basic date values 
 def generate_date(seed, start: pd.Series, end: pd.Series) -> pd.Series:
+  if start.empty or end.empty:
+    return pd.Series()
   rng = np.random.default_rng(seed)
   ranges = (end - start).dt.days.clip(lower=0)
   random_days = (rng.random(len(start)) * (ranges + 1)).astype(int)  # fix: was np.random.rand

@@ -33,7 +33,7 @@ class Region(Entity):
                     start=datetime.datetime(1998, 1, 1),
                     end=datetime.datetime(2002, 1, 1),
                 )]
-    name:       Annotated[str,  GenFaker("city", seed=42)]
+    name:       Annotated[str,  GenFaker("city")]
     code:       Annotated[str,  GenPattern(r'[A-Z]{2}-\d{3}'), Unique()]
 
 
@@ -48,7 +48,7 @@ class Customer(Entity):
     region_id:   Annotated[int,  ForeignKey(Region)]
     region2_id:  Annotated[int,  ForeignKey(Region)]
     email:       Annotated[str,  GenFaker("email"), Unique()]
-    sexe:        Annotated[int,  GenCategorical(categories=['male', 'female'])] 
+    sexe:        Annotated[str,  GenCategorical(categories=['male', 'female'])] 
     age:         Annotated[int,  GenNormal(min=18, max=90, mean=40, std=15, rounding=0)]
     code:        Annotated[str,  GenPattern(r'CUST-[A-Z]{3}-\d{4}')]
     segment:     Annotated[str,  CustomGen(
@@ -98,7 +98,8 @@ df_region_pre = pd.DataFrame({
 # ---------------------------------------------------------------------------
 
 entities = {
-    Region:      EntityContext(Region,      preexisting=df_region_pre, N=8),
+    #Region:      EntityContext(Region,      preexisting=df_region_pre, N=8),
+    Region:      EntityContext(Region,      N=0),
     Customer:    EntityContext(Customer,    N=200),
     Transaction: EntityContext(Transaction, N=1000),
 }
@@ -111,8 +112,6 @@ sim.simulate()
 sim.fault_injection(fault_maps) 
 
 gens = sim.get_data(preexisting=False)
-
-print(sim._report)
 
 
 for e, data in gens.items():

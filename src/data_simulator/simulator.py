@@ -17,36 +17,38 @@ from data_simulator.faultmap import FaultMap
 from dataclasses import dataclass, field
 
 
-
 @dataclass
-class DataSimulationReport: 
-    reports: dict[type[Entity], dict] = field(default_factory=dict) 
+class DataSimulationReport:
+    _reports: dict[tuple, Any] = field(default_factory=dict)
 
-    def update(self, entity, fld: IEntityField, annotation: IAnnotation, result: Any) -> None: 
-      ann_name = annotation.__class__.__name__ 
-      self.reports.setdefault(entity, {}).setdefault(fld.name, {})[ann_name] = result 
+    def update(self, entity, fld: IEntityField, annotation: IAnnotation, result: Any) -> None:
+      self._reports[(entity.__name__, fld.name, annotation.__class__.__name__)] = result
 
     def get_field(self, entity, fieldname: str) -> dict:
-        """Get all annotations for a given entity + field."""
-        return self.reports.get(entity, {}).get(fieldname, {})
+      return {k: v for k, v in self._reports.items() if k[0] == entity and k[1] == fieldname}
 
     def get_entity(self, entity) -> dict:
-        """Get all fields and annotations for a given entity."""
-        return self.reports.get(entity, {})
-      
-    def __str__(self) -> str:
-      lines = []
-      for entity, fields in self.reports.items():
-          lines.append(f"\n\n=== {entity.__name__} ===") 
-          for fieldname, annotations in fields.items():
-              lines.append(f"\n  {fieldname}: ")
-              for annotation_name, result in annotations.items():
-                if isinstance(result, Exception):
-                  lines.append(f"    {annotation_name}: {result} ")
-                elif isinstance(result, pd.Series):
-                  lines.append(f"    {annotation_name}: {result.shape[0]}")
-      return "".join(lines)
+      return {k: v for k, v in self._reports.items() if k[0] == entity}
 
+    def failures(self) -> list[tuple]:
+      return [
+        (entity, fieldname, ann, res) 
+        for (entity, fieldname, ann), res in self._reports.items() 
+        if isinstance(res, Exception) 
+      ]
+      
+    def successes(self) -> list[tuple]:
+      return [
+        (entity, fieldname, ann, res.shape[0]) 
+        for (entity, fieldname, ann), res in self._reports.items() 
+        if isinstance(res, pd.Series) 
+      ]
+
+
+class DataSimulatorException(Exception):
+    def __init__(self, failures: pd.DataFrame):
+        self.failures = failures
+        super().__init__(f"Data simulation failed with {len(failures)} failure(s):\n{failures.to_string()}")
 
 # DataSimulator =====================================================
 @dataclass 
@@ -65,7 +67,15 @@ class DataSimulator:
         self._pass_foreign_keys() # ! pass 2 
         self._pass_creation_times() # ! pass 3 
         self._pass_standard_generation() # ! pass 4 
-
+        
+        # #failures = pd.DataFrame(self._report.failures(), columns=['entity', 'field', 'annotations', 'failure'])
+        # df_failures = pd.DataFrame(self._report.failures(), columns=['entity', 'field', 'annotation', 'failure'])
+        # if not df_failures.empty:
+        #   raise DataSimulatorException(df_failures)
+        # else:
+        #   df_successes = pd.DataFrame(self._report.successes(), columns=['entity', 'field', 'annotation', 'generated'])
+        #   print(df_successes)
+        
 
     def _pass_primary_keys(self) -> None: 
         for entity, ctx in self.entities.items(): 
@@ -73,10 +83,13 @@ class DataSimulator:
           if pk_fld is None: 
             continue 
           ann = pk_fld.get(PrimaryKey) 
-          pk_ctx = FactoryCtx.make_pkctx(ctx) 
           try:
+            pk_ctx = FactoryCtx.make_pkctx(ctx) 
             serie = ann.generate(pk_ctx) 
             ctx.generated[pk_fld.name] = self._coerce_column(serie, pk_fld.base_type) 
+            
+            if serie.empty:
+              raise Exception(f'{entity.__name__}.{pk_fld.name} has generated 0 primary keys') 
             self._report.update(entity, pk_fld, ann, serie)
           except Exception as e:
             self._report.update(entity, pk_fld, ann, e)
@@ -85,10 +98,13 @@ class DataSimulator:
         for entity, ctx in self.entities.items(): 
           for fld in entity.get([ForeignKey]): 
             ann = fld.get(ForeignKey) 
-            fk_ctx = FactoryCtx.make_fkctx(fld.name, ctx, self.entities)
             try:
+              fk_ctx = FactoryCtx.make_fkctx(fld.name, ctx, self.entities)
               serie = ann.generate(fk_ctx) 
               ctx.generated[fld.name] = self._coerce_column(serie, fld.base_type) 
+              
+              if serie.empty:
+                raise Exception(f'{entity.__name__}.{fk_ctx.name} has generated 0 foreign keys') 
               self._report.update(entity, fld, ann, serie) 
             except Exception as e: 
               self._report.update(entity, fld, ann, e) 
@@ -99,10 +115,13 @@ class DataSimulator:
           if ct_fld is None:
             continue
           ann = ct_fld.get(CreationTime) 
-          ct_ctx = FactoryCtx.make_ctctx(ct_fld.name, ctx, self.entities) 
           try:
+            ct_ctx = FactoryCtx.make_ctctx(ct_fld.name, ctx, self.entities) 
             serie = ann.generate(ct_ctx) 
             ctx.generated[ct_fld.name] = self._coerce_column(serie, ct_fld.base_type) 
+            
+            if serie.empty:
+              raise Exception(f'{entity.__name__}.{ct_fld.name} has generated 0 creation time') 
             self._report.update(entity, ct_fld, ann, serie) 
           except Exception as e: 
             self._report.update(entity, ct_fld, ann, e) 
@@ -112,12 +131,15 @@ class DataSimulator:
           for fld in entity.get([IGen]): 
             ann_gen = fld.get(IGen) 
             ann_trf = fld.get(Transformer) 
-            gen_ctx = FactoryCtx.make_genctx(fld.name, ctx, self.entities) 
             try:
+              gen_ctx = FactoryCtx.make_genctx(fld.name, ctx, self.entities) 
               serie = ann_gen.generate(gen_ctx) 
               if ann_trf:
                 serie = ann_trf.transform(serie) 
               ctx.generated[fld.name] = self._coerce_column(serie, fld.base_type) 
+              
+              if serie.empty:
+                raise Exception(f'{entity.__name__}.{fld.name} has generated 0 values') 
               self._report.update(entity, fld, ann_gen, serie) 
             except Exception as e:
               self._report.update(entity, fld, ann_gen, e) 
@@ -134,6 +156,9 @@ class DataSimulator:
               serie = ann.inject(fault_ctx) 
               diff = serie[ctx.generated[fld.name]!=serie]
               ctx.generated[fld.name] = serie 
+              
+              if diff.empty:
+                raise Exception(f'{entity.__name__}.{fld.name} has generated 0 faulty values') 
               self._report.update(entity, fld, ann, diff) 
             except Exception as e: 
               self._report.update(entity, fld, ann, e) 

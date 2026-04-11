@@ -37,7 +37,6 @@ class IGen(IAnnotation):
 class CustomGen(IGen):
     fn: Callable[[GenCtx], pd.Series]
     seed: int | None = None 
-    """User-supplied function: (partial_df: DataFrame) -> Series."""
     
     def generate(self, ctx: GenCtx) -> pd.Series:
         return self.fn(ctx)
@@ -101,13 +100,6 @@ class GenFaker(IGen):
 
     def generate(self, ctx: GenCtx) -> pd.Series: 
       return generator.generate_with_faker(ctx.N, self.seed, self.provider) 
-        # fkr = faker.Faker()
-        # provider_fn = getattr(fkr, self.provider, None)
-        # if provider_fn is None:
-        #     raise AttributeError(
-        #         f"Faker has no provider '{self.provider}'."
-        #     )
-        # return pd.Series([provider_fn() for _ in range(ctx.N)])
 
 
 # ! GENERATE Pattern ==========================================
@@ -118,7 +110,6 @@ class GenPattern(IGen):
 
     def generate(self, ctx: GenCtx) -> pd.Series: 
       return generator.generate_pattern(ctx.N, self.seed, self.pattern) 
-      #return pd.Series([rstr.xeger(self.pattern) for _ in range(ctx.N)]) 
 
 
 
