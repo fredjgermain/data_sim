@@ -24,7 +24,7 @@ class PkCtx:
 @dataclass
 class PrimaryKey(IAnnotation):
     fn: Callable[[pd.DataFrame], pd.Series] | None = None
-    seed: int | None = None
+    seed: int | None = None 
 
     def generate(self, ctx:PkCtx) -> pd.Series:
         if self.fn:
@@ -54,7 +54,7 @@ class FkCtx:
 @dataclass
 class ForeignKey(IAnnotation):
     target: type[IEntity]
-    seed: int | None = None
+    seed: int | None = None 
 
     def generate(self, ctx: FkCtx) -> pd.Series: 
       if ctx.fk_values is None or ctx.fk_values.empty: 
@@ -79,7 +79,7 @@ class CtCtx:
 class CreationTime(IAnnotation):
     start: datetime.datetime
     end: datetime.datetime
-    seed: int | None = None
+    seed: int | None = None 
 
     def generate(self, ctx: CtCtx) -> pd.Series:
         if ctx.agg_creation_time.empty:

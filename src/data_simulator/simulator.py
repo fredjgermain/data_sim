@@ -19,11 +19,12 @@ from dataclasses import dataclass, field
 
 
 @dataclass
-class DataSimulationReport:
-    reports: dict[type[Entity], dict] = field(default_factory=dict)
+class DataSimulationReport: 
+    reports: dict[type[Entity], dict] = field(default_factory=dict) 
 
-    def update(self, entity, fld: IEntityField, annotation: IAnnotation, success: Any) -> None:
-        self.reports.setdefault(entity, {}).setdefault(fld.name, {})[annotation.__class__.__name__] = success
+    def update(self, entity, fld: IEntityField, annotation: IAnnotation, result: Any) -> None: 
+      ann_name = annotation.__class__.__name__ 
+      self.reports.setdefault(entity, {}).setdefault(fld.name, {})[ann_name] = result 
 
     def get_field(self, entity, fieldname: str) -> dict:
         """Get all annotations for a given entity + field."""
@@ -39,9 +40,11 @@ class DataSimulationReport:
           lines.append(f"\n\n=== {entity.__name__} ===") 
           for fieldname, annotations in fields.items():
               lines.append(f"\n  {fieldname}: ")
-              for annotation_name, success in annotations.items():
-                  status = "✓" if success else "✗"
-                  lines.append(f"    {status} {annotation_name}")
+              for annotation_name, result in annotations.items():
+                if isinstance(result, Exception):
+                  lines.append(f"    {annotation_name}: {result} ")
+                elif isinstance(result, pd.Series):
+                  lines.append(f"    {annotation_name}: {result.shape[0]}")
       return "".join(lines)
 
 
@@ -74,7 +77,7 @@ class DataSimulator:
           try:
             serie = ann.generate(pk_ctx) 
             ctx.generated[pk_fld.name] = self._coerce_column(serie, pk_fld.base_type) 
-            self._report.update(entity, pk_fld, ann, True)
+            self._report.update(entity, pk_fld, ann, serie)
           except Exception as e:
             self._report.update(entity, pk_fld, ann, e)
 
@@ -86,7 +89,7 @@ class DataSimulator:
             try:
               serie = ann.generate(fk_ctx) 
               ctx.generated[fld.name] = self._coerce_column(serie, fld.base_type) 
-              self._report.update(entity, fld, ann, True) 
+              self._report.update(entity, fld, ann, serie) 
             except Exception as e: 
               self._report.update(entity, fld, ann, e) 
 
@@ -100,7 +103,7 @@ class DataSimulator:
           try:
             serie = ann.generate(ct_ctx) 
             ctx.generated[ct_fld.name] = self._coerce_column(serie, ct_fld.base_type) 
-            self._report.update(entity, ct_fld, ann, True) 
+            self._report.update(entity, ct_fld, ann, serie) 
           except Exception as e: 
             self._report.update(entity, ct_fld, ann, e) 
 
@@ -115,7 +118,7 @@ class DataSimulator:
               if ann_trf:
                 serie = ann_trf.transform(serie) 
               ctx.generated[fld.name] = self._coerce_column(serie, fld.base_type) 
-              self._report.update(entity, fld, ann_gen, True) 
+              self._report.update(entity, fld, ann_gen, serie) 
             except Exception as e:
               self._report.update(entity, fld, ann_gen, e) 
 
@@ -129,10 +132,11 @@ class DataSimulator:
             fault_ctx = FactoryCtx.make_faultctx(fld.name, ctx) 
             try:
               serie = ann.inject(fault_ctx) 
+              diff = serie[ctx.generated[fld.name]!=serie]
               ctx.generated[fld.name] = serie 
-              self._report.update(entity, fld, ann, True)
+              self._report.update(entity, fld, ann, diff) 
             except Exception as e: 
-              self._report.update(entity, fld, ann, e)
+              self._report.update(entity, fld, ann, e) 
   
   
     # ! Validation ----------------------------------------
@@ -143,9 +147,9 @@ class DataSimulator:
           for ann in fld.get_many(IValid): 
             try:
               res = ann.validate(valid_ctx) 
-              self._report.update(entity, fld, ann, True) 
+              self._report.update(entity, fld, ann, res) 
             except Exception as e: 
-              self._report.update(entity, fld, ann, e)
+              self._report.update(entity, fld, ann, e) 
 
 
     def _coerce_column(self, series: pd.Series, base_type: type) -> pd.Series:

@@ -22,7 +22,7 @@ class FactoryCtx:
   def make_fkctx(cls, 
     name:str, 
     current_ctx:IEntityContext, 
-    entities:dict[type[IEntity], IEntityContext]
+    entities:dict[type[IEntity], IEntityContext], 
   ) -> FkCtx: 
     
     entity = current_ctx.entity 
@@ -35,7 +35,7 @@ class FactoryCtx:
   def make_ctctx(cls, 
     name:str, 
     ctx:IEntityContext, 
-    entities:dict[type[IEntity], IEntityContext]
+    entities:dict[type[IEntity], IEntityContext], 
   ) -> CtCtx: 
     
     agg_creation_time = aggregate_creation_time(ctx, entities) 
@@ -46,11 +46,11 @@ class FactoryCtx:
   def make_genctx(cls, 
     name:str, 
     ctx:IEntityContext, 
-    entities:dict[type[IEntity], IEntityContext]
+    entities:dict[type[IEntity], IEntityContext], 
   ) -> GenCtx: 
     current_data = ctx.get_data(preexisting=False) 
-    foreign_data = { e:c.get_data() for e, c in entities.items() } 
-    return GenCtx(name=name, N=ctx.N, entity=ctx.entity, current_data=current_data, foreign_datas=foreign_data) 
+    foreign_datas = { e:c.get_data() for e, c in entities.items() } 
+    return GenCtx(name, ctx.N, ctx.entity, current_data, foreign_datas) 
   
   
   @classmethod

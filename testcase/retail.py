@@ -19,6 +19,7 @@ from data_simulator.annotations.generator import (
 from data_simulator.annotations.primaries import (PrimaryKey, CreationTime, ForeignKey)
 from data_simulator.annotations.fault import Nullify, Duplicate
 from data_simulator.faultmap import FaultMap
+from data_simulator.utils import generator
 
 
 # ---------------------------------------------------------------------------
@@ -32,8 +33,9 @@ class Region(Entity):
                     start=datetime.datetime(1998, 1, 1),
                     end=datetime.datetime(2002, 1, 1),
                 )]
-    name:       Annotated[str,  GenFaker("city")]
+    name:       Annotated[str,  GenFaker("city", seed=42)]
     code:       Annotated[str,  GenPattern(r'[A-Z]{2}-\d{3}'), Unique()]
+
 
 
 @dataclass
@@ -43,8 +45,8 @@ class Customer(Entity):
                      start=datetime.datetime(2015, 1, 1),
                      end=datetime.datetime(2023, 12, 31),
                  )]
-    region_id:   Annotated[int,   ForeignKey(Region)]
-    region2_id:  Annotated[int,   ForeignKey(Region)]
+    region_id:   Annotated[int,  ForeignKey(Region)]
+    region2_id:  Annotated[int,  ForeignKey(Region)]
     email:       Annotated[str,  GenFaker("email"), Unique()]
     sexe:        Annotated[int,  GenCategorical(categories=['male', 'female'])] 
     age:         Annotated[int,  GenNormal(min=18, max=90, mean=40, std=15, rounding=0)]
@@ -75,7 +77,7 @@ class Transaction(Entity):
 
 @dataclass 
 class CustomerFaultMap(FaultMap): 
-  email: Annotated[str, Nullify(0.8)] 
+  email: Annotated[str, Nullify(0.05)] 
 
 
 
@@ -101,24 +103,19 @@ entities = {
     Transaction: EntityContext(Transaction, N=1000),
 }
 
-fault_maps = { 
-  Customer:CustomerFaultMap 
-} 
-
-
+fault_maps = { Customer:CustomerFaultMap } 
 
 
 sim = DataSimulator(entities) 
 sim.simulate() 
 sim.fault_injection(fault_maps) 
 
-print('testt')
 gens = sim.get_data(preexisting=False)
 
 print(sim._report)
 
 
-# for e, data in gens.items():
-#   print(f'=== {e.__name__} === {data.shape}') 
-#   print(data.head()) 
+for e, data in gens.items():
+  print(f'=== {e.__name__} === {data.shape}') 
+  print(data.head()) 
 

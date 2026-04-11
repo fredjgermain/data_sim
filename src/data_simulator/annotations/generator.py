@@ -1,6 +1,4 @@
 import pandas as pd
-import rstr
-import faker
 from dataclasses import dataclass, field
 from typing import Callable
 import datetime
@@ -28,7 +26,6 @@ class GenCtx:
 
 
 class IGen(IAnnotation):
-    seed: int | None = None
 
     def generate(self, ctx:GenCtx) -> pd.Series:
       raise NotImplementedError
@@ -39,6 +36,7 @@ class IGen(IAnnotation):
 @dataclass
 class CustomGen(IGen):
     fn: Callable[[GenCtx], pd.Series]
+    seed: int | None = None 
     """User-supplied function: (partial_df: DataFrame) -> Series."""
     
     def generate(self, ctx: GenCtx) -> pd.Series:
@@ -62,6 +60,7 @@ class FromForeignKey(IGen):
 class GenDate(IGen):
   start: datetime.datetime
   end: datetime.datetime
+  seed: int | None = None 
     
   def generate(self, ctx:GenCtx) -> pd.Series: 
       start = pd.Series([self.start] * ctx.N) 
@@ -73,6 +72,7 @@ class GenDate(IGen):
 class GenTime(IGen):
   start: datetime.datetime
   end: datetime.datetime
+  seed: int | None = None 
     
   def generate(self, ctx:GenCtx) -> pd.Series: 
     start = pd.Series([self.start] * ctx.N) 
@@ -86,10 +86,10 @@ class GenTime(IGen):
 class GenCategorical(IGen):
     categories: list
     weight: list | None = None 
+    seed: int | None = None 
     
     def generate(self, ctx:GenCtx):
         return generator.generate_categorical(ctx.N, self.seed, self.categories, self.weight)
-
 
 
 
@@ -97,24 +97,28 @@ class GenCategorical(IGen):
 @dataclass
 class GenFaker(IGen):
     provider: str
+    seed: int | None = None 
 
-    def generate(self, ctx: GenCtx) -> pd.Series:
-        fkr = faker.Faker()
-        provider_fn = getattr(fkr, self.provider, None)
-        if provider_fn is None:
-            raise AttributeError(
-                f"Faker has no provider '{self.provider}'."
-            )
-        return pd.Series([provider_fn() for _ in range(ctx.N)])
+    def generate(self, ctx: GenCtx) -> pd.Series: 
+      return generator.generate_with_faker(ctx.N, self.seed, self.provider) 
+        # fkr = faker.Faker()
+        # provider_fn = getattr(fkr, self.provider, None)
+        # if provider_fn is None:
+        #     raise AttributeError(
+        #         f"Faker has no provider '{self.provider}'."
+        #     )
+        # return pd.Series([provider_fn() for _ in range(ctx.N)])
 
 
 # ! GENERATE Pattern ==========================================
 @dataclass
 class GenPattern(IGen):
     pattern: str
+    seed: int | None = None 
 
-    def generate(self, ctx: GenCtx) -> pd.Series:
-        return pd.Series([rstr.xeger(self.pattern) for _ in range(ctx.N)])
+    def generate(self, ctx: GenCtx) -> pd.Series: 
+      return generator.generate_pattern(ctx.N, self.seed, self.pattern) 
+      #return pd.Series([rstr.xeger(self.pattern) for _ in range(ctx.N)]) 
 
 
 
@@ -125,6 +129,7 @@ class GenNum(IGen):
     max: float | None = None 
     seed: int | None = None 
     rounding: int | None = None  # None=float, 0=int, n=decimal places
+    seed: int | None = None 
     
     def clip(self, serie: pd.Series) -> pd.Series:
         if self.min is None and self.max is None:
@@ -144,10 +149,11 @@ class GenNum(IGen):
 
 @dataclass
 class GenUniform(GenNum):
+  seed: int | None = None 
 
-    def generate(self, ctx: GenCtx) -> pd.Series: 
-        return generator.generate_uniform(
-            ctx.N, self.seed, self.min or 0, self.max or 1) 
+  def generate(self, ctx: GenCtx) -> pd.Series: 
+      return generator.generate_uniform(
+          ctx.N, self.seed, self.min or 0, self.max or 1) 
     
 
 @dataclass
@@ -155,6 +161,7 @@ class GenNormal(GenNum):
     mean: float = 0 
     std:  float = 1 
     skewness: float = 0 
+    seed: int | None = None 
 
     def generate(self, ctx: GenCtx) -> pd.Series:
         res = generator.generate_normal(
@@ -171,6 +178,7 @@ class GenNormal(GenNum):
 class GenGamma(GenNum):
     skewness: float = 1.0
     scale: float = 1.0
+    seed: int | None = None 
     
     def generate(self, ctx: GenCtx) -> pd.Series:
         res = generator.generate_gamma(
@@ -184,6 +192,7 @@ class GenGamma(GenNum):
 @dataclass
 class GenPoisson(GenNum):
     mean: float = 1.0
+    seed: int | None = None 
     
     def generate(self, ctx: GenCtx) -> pd.Series:
         res = generator.generate_poisson(ctx.N, self.seed, self.mean)
@@ -193,6 +202,7 @@ class GenPoisson(GenNum):
 @dataclass
 class GenExponential(GenNum):
   scale: float = 1.0
+  seed: int | None = None 
 
   def generate(self, ctx: GenCtx) -> pd.Series:
     res = generator.generate_exponential(ctx.N, self.seed, self.scale)
@@ -204,7 +214,8 @@ class GenExponential(GenNum):
 @dataclass 
 class Transformer(IAnnotation):
     fn: Callable[[pd.Series], pd.Series]
+    seed: int | None = None 
     
     def transform(self, series:pd.Series) -> pd.Series: 
-        return self.fn(series)
+        return self.fn(series, self.seed) 
 

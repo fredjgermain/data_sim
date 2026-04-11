@@ -2,8 +2,43 @@
 import numpy as np 
 import pandas as pd
 import uuid
- 
+import random  
+import rstr
+import faker
+
 from scipy.stats import skewnorm 
+
+
+
+# ! GERATE WITH FAKER
+def generate_with_faker(N:int, seed, provider: str) -> pd.Series:
+    fkr = faker.Faker()
+    provider_fn = getattr(fkr, provider, None)
+    if provider_fn is None:
+      raise AttributeError(f"Faker has no provider '{provider}'.")
+
+    if seed is not None:
+      state = random.getstate()
+      faker.Faker.seed(seed)
+
+    result = pd.Series([provider_fn() for _ in range(N)])
+
+    if seed is not None:
+      random.setstate(state)
+
+    return result
+
+
+# ! GENERATE PATTERN
+def generate_pattern(N:int, seed, pattern:str) -> pd.Series:
+    if seed is not None:
+      state = random.getstate()
+      random.seed(seed)
+    result = pd.Series([rstr.xeger(pattern) for _ in range(N)])
+    
+    if seed is not None:
+        random.setstate(state)
+    return result
 
 
 # ! GENERATE IDS
