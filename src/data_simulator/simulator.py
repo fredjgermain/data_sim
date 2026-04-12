@@ -1,7 +1,6 @@
 import pandas as pd 
 from dataclasses import dataclass, field
 import datetime
-from typing import Any
 
 from data_simulator.interface import IAnnotation, IEntity, IEntityField, IEntityContext
 from data_simulator.annotations.primaries import ( PrimaryKey, ForeignKey, CreationTime ) 
@@ -13,42 +12,8 @@ from data_simulator.annotations.factory_ctx import FactoryCtx
 from data_simulator.context import EntityContext 
 from data_simulator.entity import Entity, EntityField 
 from data_simulator.faultmap import FaultMap 
+from data_simulator.report_exception import DataSimulationReport, DataSimulatorException 
 
-from dataclasses import dataclass, field
-
-
-@dataclass
-class DataSimulationReport:
-    _reports: dict[tuple, Any] = field(default_factory=dict)
-
-    def update(self, entity, fld: IEntityField, annotation: IAnnotation, result: Any) -> None:
-      self._reports[(entity.__name__, fld.name, annotation.__class__.__name__)] = result
-
-    def get_field(self, entity, fieldname: str) -> dict:
-      return {k: v for k, v in self._reports.items() if k[0] == entity and k[1] == fieldname}
-
-    def get_entity(self, entity) -> dict:
-      return {k: v for k, v in self._reports.items() if k[0] == entity}
-
-    def failures(self) -> list[tuple]:
-      return [
-        (entity, fieldname, ann, res) 
-        for (entity, fieldname, ann), res in self._reports.items() 
-        if isinstance(res, Exception) 
-      ]
-      
-    def successes(self) -> list[tuple]:
-      return [
-        (entity, fieldname, ann, res.shape[0]) 
-        for (entity, fieldname, ann), res in self._reports.items() 
-        if isinstance(res, pd.Series) 
-      ]
-
-
-class DataSimulatorException(Exception):
-    def __init__(self, failures: pd.DataFrame):
-        self.failures = failures
-        super().__init__(f"Data simulation failed with {len(failures)} failure(s):\n{failures.to_string()}")
 
 
 # DataSimulator =====================================================
@@ -60,6 +25,12 @@ class DataSimulator:
 
     def get_data(self, preexisting=True, generated=True) -> dict[type[Entity], pd.DataFrame]:
       return {entity: ctx.get_data(preexisting=preexisting, generated=generated) for entity, ctx in self.entities.items()}
+    
+    def get_failures(self) -> pd.DataFrame:
+      return pd.DataFrame(self._report.failures(), columns=['entity', 'field', 'annotation', 'failure'])
+    
+    def get_summary(self) -> pd.DataFrame:
+      return pd.DataFrame(self._report.summary(), columns=['entity', 'field', 'annotation', 'result'])
 
 
     # ! Simulation ----------------------------------------
@@ -69,13 +40,11 @@ class DataSimulator:
         self._pass_creation_times() # ! pass 3 
         self._pass_standard_generation() # ! pass 4 
         
-        #failures = pd.DataFrame(self._report.failures(), columns=['entity', 'field', 'annotations', 'failure'])
-        df_failures = pd.DataFrame(self._report.failures(), columns=['entity', 'field', 'annotation', 'failure'])
-        if not df_failures.empty:
-          raise DataSimulatorException(df_failures)
-        else:
-          df_successes = pd.DataFrame(self._report.successes(), columns=['entity', 'field', 'annotation', 'generated'])
-          print(df_successes)
+        # If any simulation failure is reported, then it raises DataSimulatorException
+        failures = self._report.failures()
+        if failures:
+          raise DataSimulatorException(failures)
+    
 
     def _pass_primary_keys(self) -> None: 
         for entity, ctx in self.entities.items(): 
@@ -147,6 +116,15 @@ class DataSimulator:
 
     # ! Fault Injection -----------------------------------
     def fault_injection(self, fault_maps:dict[type[Entity], type[FaultMap]]) -> None: 
+      self._fault_injection(fault_maps) 
+      
+      # If any simulation failure or fault injection failure is reported, then it raises DataSimulatorException
+      failures = self._report.failures()
+      if failures:
+        raise DataSimulatorException(failures)
+    
+      
+    def _fault_injection(self, fault_maps:dict[type[Entity], type[FaultMap]]) -> None: 
       for entity, fault_map in fault_maps.items(): 
         ctx = self.entities[entity] 
         for fld in fault_map.get([IFault]): 

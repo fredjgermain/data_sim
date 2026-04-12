@@ -23,18 +23,18 @@ from data_simulator.annotations.fault import Nullify, Duplicate
 from faker import Faker
 fake = Faker()
 
-def fake_movie_title(ctx:GenCtx):
+def fake_movie_title(seed, ctx:GenCtx) -> pd.Series:
   res = []
   for _ in range(ctx.N):
     words = fake.words(nb=3)  # Generate 3 random words
     capitalized_words = [w.capitalize() for w in words]
     res.append(' '.join(capitalized_words))
-  return res
+  return pd.Series(res)
 
-def res_time_func(ctx:GenCtx): 
+def res_time_func(seed, ctx:GenCtx) -> pd.Series: 
   complaints_N = ctx.current_data['complaints_N'] 
   res_time_per_complain = np.random.uniform(2,5, size=ctx.N) 
-  return complaints_N * res_time_per_complain 
+  return pd.Series(complaints_N * res_time_per_complain )
 
 
 
@@ -118,11 +118,19 @@ entities = {
 # Simulation ---------------
 
 sim = DataSimulator(entities) 
-results = sim.simulate() 
+try:
+  sim.simulate() 
+  #sim.fault_injection(fault_maps) 
+  sim._report.failures() 
+  print(sim.get_summary()) 
+except:
+  print(sim.get_failures()) 
 
-for e in entities.keys(): 
-  print(e.__name__)
-  print(results[e].head(10)) 
-  print()
+gens = sim.get_data(preexisting=False)
+
+
+for e, data in gens.items():
+  print(f'=== {e.__name__} === {data.shape}') 
+  print(data.head()) 
 
 #print(results[e][['complaints_N', 'res_time']].sort_values(by=['complaints_N'])) 

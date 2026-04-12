@@ -109,12 +109,17 @@ entities = {
     Transaction: EntityContext(Transaction, N=1000),
 }
 
-#fault_maps = { Customer:CustomerFaultMap } 
+fault_maps = { Customer:CustomerFaultMap } 
 
 
 sim = DataSimulator(entities) 
-sim.simulate() 
-#sim.fault_injection(fault_maps) 
+try:
+  sim.simulate() 
+  sim.fault_injection(fault_maps) 
+  sim._report.failures() 
+  print(sim.get_summary()) 
+except:
+  print(sim.get_failures()) 
 
 gens = sim.get_data(preexisting=False)
 
@@ -122,4 +127,3 @@ gens = sim.get_data(preexisting=False)
 for e, data in gens.items():
   print(f'=== {e.__name__} === {data.shape}') 
   print(data.head()) 
-

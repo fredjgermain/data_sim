@@ -208,5 +208,5 @@ class Transformer(IAnnotation):
     seed: int | None = None 
     
     def transform(self, series:pd.Series) -> pd.Series: 
-        return self.fn(series, self.seed) 
+        return self.fn(self.seed, series) 
 
