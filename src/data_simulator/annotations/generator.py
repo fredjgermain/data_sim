@@ -34,12 +34,12 @@ class IGen(IAnnotation):
 
 # ! GENERATE Custom ==========================================
 @dataclass
-class CustomGen(IGen):
-    fn: Callable[[GenCtx], pd.Series]
+class CustomGen(IGen): 
+    fn: Callable[[int | None, GenCtx], pd.Series] 
     seed: int | None = None 
     
-    def generate(self, ctx: GenCtx) -> pd.Series:
-        return self.fn(ctx)
+    def generate(self, ctx: GenCtx) -> pd.Series: 
+      return self.fn(self.seed, ctx) 
 
 
 # ! GENERATE from foreign key ===================================

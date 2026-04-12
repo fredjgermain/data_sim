@@ -12,7 +12,7 @@ from data_simulator.annotations.factory_ctx import FactoryCtx
 
 from data_simulator.context import EntityContext 
 from data_simulator.entity import Entity, EntityField 
-from data_simulator.faultmap import FaultMap
+from data_simulator.faultmap import FaultMap 
 
 from dataclasses import dataclass, field
 
@@ -50,6 +50,7 @@ class DataSimulatorException(Exception):
         self.failures = failures
         super().__init__(f"Data simulation failed with {len(failures)} failure(s):\n{failures.to_string()}")
 
+
 # DataSimulator =====================================================
 @dataclass 
 class DataSimulator: 
@@ -68,14 +69,13 @@ class DataSimulator:
         self._pass_creation_times() # ! pass 3 
         self._pass_standard_generation() # ! pass 4 
         
-        # #failures = pd.DataFrame(self._report.failures(), columns=['entity', 'field', 'annotations', 'failure'])
-        # df_failures = pd.DataFrame(self._report.failures(), columns=['entity', 'field', 'annotation', 'failure'])
-        # if not df_failures.empty:
-        #   raise DataSimulatorException(df_failures)
-        # else:
-        #   df_successes = pd.DataFrame(self._report.successes(), columns=['entity', 'field', 'annotation', 'generated'])
-        #   print(df_successes)
-        
+        #failures = pd.DataFrame(self._report.failures(), columns=['entity', 'field', 'annotations', 'failure'])
+        df_failures = pd.DataFrame(self._report.failures(), columns=['entity', 'field', 'annotation', 'failure'])
+        if not df_failures.empty:
+          raise DataSimulatorException(df_failures)
+        else:
+          df_successes = pd.DataFrame(self._report.successes(), columns=['entity', 'field', 'annotation', 'generated'])
+          print(df_successes)
 
     def _pass_primary_keys(self) -> None: 
         for entity, ctx in self.entities.items(): 

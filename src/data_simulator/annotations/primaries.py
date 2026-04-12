@@ -23,12 +23,12 @@ class PkCtx:
 
 @dataclass
 class PrimaryKey(IAnnotation):
-    fn: Callable[[pd.DataFrame], pd.Series] | None = None
+    fn: Callable[[int | None, PkCtx], pd.Series] | None = None
     seed: int | None = None 
 
     def generate(self, ctx:PkCtx) -> pd.Series:
         if self.fn:
-            return self.fn(ctx)
+            return self.fn(self.seed, ctx)
         return self._generate_sequential(ctx) # Default primarykey generator. 
 
 

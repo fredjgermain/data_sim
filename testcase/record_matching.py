@@ -12,9 +12,7 @@ from data_simulator.simulator import DataSimulator
 
 from data_simulator.annotations.generator import GenCtx, IGen
 from data_simulator.annotations.generator import (
-    GenNormal, GenUniform, GenFaker, GenPattern, 
-    CustomGen, GenCategorical, GenGamma, GenPoisson, 
-    Transformer, FromForeignKey 
+    GenFaker, Transformer, FromForeignKey 
 ) 
 from data_simulator.annotations.primaries import (PrimaryKey, CreationTime, ForeignKey) 
 from data_simulator.annotations.fault import Nullify, Duplicate, Misspell, MissingWord 

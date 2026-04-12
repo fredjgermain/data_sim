@@ -2,9 +2,9 @@
 from typing import Annotated, get_args, get_origin, overload
 
 from dataclasses import dataclass
-from data_simulator.annotations.primaries import PrimaryKey, CreationTime 
+#from data_simulator.annotations.primaries import PrimaryKey, CreationTime 
 from data_simulator.interface import IEntity, IEntityField, IAnnotation 
-from data_simulator.entity import EntityField
+from data_simulator.entity import EntityField 
 
 
 @dataclass

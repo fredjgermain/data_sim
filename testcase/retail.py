@@ -7,14 +7,14 @@ import pandas as pd
 from dataclasses import dataclass
 from typing import Annotated
 
-from data_simulator.annotations.primaries import PrimaryKey
+from data_simulator.annotations.primaries import PrimaryKey, PkCtx
 from data_simulator.annotations.validation import Unique
 from data_simulator.entity import Entity
 from data_simulator.context import EntityContext
 from data_simulator.simulator import DataSimulator
 
 from data_simulator.annotations.generator import (
-    GenNormal, GenUniform, GenFaker, GenPattern, CustomGen, GenCategorical, 
+  GenCtx, GenNormal, GenUniform, GenFaker, GenPattern, CustomGen, GenCategorical, 
 )
 from data_simulator.annotations.primaries import (PrimaryKey, CreationTime, ForeignKey)
 from data_simulator.annotations.fault import Nullify, Duplicate
@@ -37,10 +37,18 @@ class Region(Entity):
     code:       Annotated[str,  GenPattern(r'[A-Z]{2}-\d{3}'), Unique()]
 
 
+# Custom generation function
+def customer_id_fn(seed, ctx:PkCtx) -> pd.Series: 
+  return generator.generate_ids(seed, ctx.N) 
+
+
+def age_group(seed, ctx:GenCtx) -> pd.Series: 
+  return ctx.current_data['age'].apply( lambda a: "senior" if a >= 65 else "adult" if a >= 30 else "young" ) 
+
 
 @dataclass
 class Customer(Entity):
-    customer_id: Annotated[int, PrimaryKey()]
+    customer_id: Annotated[str, PrimaryKey(fn=customer_id_fn)]
     created_at:  Annotated[datetime.datetime, CreationTime(
                      start=datetime.datetime(2015, 1, 1),
                      end=datetime.datetime(2023, 12, 31),
@@ -51,11 +59,8 @@ class Customer(Entity):
     sexe:        Annotated[str,  GenCategorical(categories=['male', 'female'])] 
     age:         Annotated[int,  GenNormal(min=18, max=90, mean=40, std=15, rounding=0)]
     code:        Annotated[str,  GenPattern(r'CUST-[A-Z]{3}-\d{4}')]
-    segment:     Annotated[str,  CustomGen(
-                     lambda ctx: ctx.current_data["age"].apply(
-                         lambda a: "senior" if a >= 65 else "adult" if a >= 30 else "young"
-                     )
-                 )]
+    age_group:   Annotated[str,  CustomGen(fn=age_group)]
+
 
 @dataclass
 class Transaction(Entity):
@@ -64,7 +69,7 @@ class Transaction(Entity):
                         start=datetime.datetime(2015, 1, 1),
                         end=datetime.datetime(2024, 12, 31),
                     )]
-    customer_id:    Annotated[int,   ForeignKey(Customer)]
+    customer_id:    Annotated[str,   ForeignKey(Customer)]
     region_id:      Annotated[int,   ForeignKey(Region)]
     amount:         Annotated[float, GenNormal(min=0, mean=150, std=80, rounding=2)]
     quantity:       Annotated[int,   GenUniform(min=1, max=10, rounding=0)]
@@ -99,17 +104,17 @@ df_region_pre = pd.DataFrame({
 
 entities = {
     #Region:      EntityContext(Region,      preexisting=df_region_pre, N=8),
-    Region:      EntityContext(Region,      N=0),
+    Region:      EntityContext(Region,      N=8),
     Customer:    EntityContext(Customer,    N=200),
     Transaction: EntityContext(Transaction, N=1000),
 }
 
-fault_maps = { Customer:CustomerFaultMap } 
+#fault_maps = { Customer:CustomerFaultMap } 
 
 
 sim = DataSimulator(entities) 
 sim.simulate() 
-sim.fault_injection(fault_maps) 
+#sim.fault_injection(fault_maps) 
 
 gens = sim.get_data(preexisting=False)
 

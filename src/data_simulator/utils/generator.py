@@ -42,10 +42,27 @@ def generate_pattern(N:int, seed, pattern:str) -> pd.Series:
 
 
 # ! GENERATE IDS
-def generate_ids(N: int, seed: int) -> pd.Series:
-    rng = np.random.default_rng(seed)
-    uuids = [uuid.UUID(int=rng.integers(0, 2**128).item()) for _ in range(N)]
-    return pd.Series([str(u) for u in uuids], dtype="string")
+def generate_ids(seed: int, N: int) -> pd.Series:
+    rng = random.Random(seed)
+    
+    ids = set()
+    while len(ids) < N:
+        fake_uuid = uuid.UUID(int=rng.getrandbits(128), version=4)
+        ids.add(str(fake_uuid))
+    
+    return pd.Series(list(ids))
+
+# def generate_ids(N: int, seed: int) -> pd.Series:
+#     rng = np.random.default_rng(seed)
+#     high = rng.integers(0, 2**64, size=N, dtype=np.uint64)
+#     low  = rng.integers(0, 2**64, size=N, dtype=np.uint64)
+#     uuids = [uuid.UUID(int=(int(h) << 64) | int(l)) for h, l in zip(high, low)]
+#     return pd.Series([str(u) for u in uuids], dtype="string")
+  
+# def generate_ids(N: int, seed: int) -> pd.Series:
+#     rng = np.random.default_rng(seed)
+#     uuids = [uuid.UUID(int=rng.integers(0, 2**128).item()) for _ in range(N)]
+#     return pd.Series([str(u) for u in uuids], dtype="string")
 
 
 # ! GENERATE numerical values 
