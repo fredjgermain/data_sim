@@ -28,7 +28,7 @@ class FaultReport:
       ] 
       
 
-class ValidationProfile(Profile):
+class ValidationProfile(Profile[IFault]):
   
   
     @classmethod 

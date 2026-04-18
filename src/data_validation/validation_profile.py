@@ -27,7 +27,7 @@ class ValidationReport:
       ] 
       
 
-class ValidationProfile(Profile):
+class ValidationProfile(Profile[IValid]):
   
   @classmethod 
   def validate(cls, data:pd.DataFrame) -> ValidationReport: 

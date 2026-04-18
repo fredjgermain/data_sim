@@ -4,7 +4,7 @@ from typing import Callable
 import datetime
 
 from _common.interface import IAnnotation
-from data_simulator.interface import Entity, EntityContext
+from data_simulator.entity import Entity
 from data_simulator.annotations.primaries import ForeignKey, PrimaryKey
 from data_simulator.utils import generator 
 
