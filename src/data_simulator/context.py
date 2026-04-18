@@ -1,14 +1,14 @@
 import pandas as pd 
 from dataclasses import dataclass, field 
 
-from data_simulator.interface import IEntity, IEntityContext
+from data_simulator.entity import Entity
 
 
 
 @dataclass
-class EntityContext(IEntityContext):
+class EntityContext:
 
-    entity:      type[IEntity]
+    entity:      type[Entity]
     N:           int
     preexisting: pd.DataFrame = field(default_factory=pd.DataFrame)
     generated:   pd.DataFrame = field(default_factory=pd.DataFrame)

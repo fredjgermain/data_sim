@@ -2,14 +2,14 @@ import pandas as pd
 from dataclasses import dataclass, field
 from typing import Callable, Any, Literal
 
-from data_simulator.interface import IAnnotation
-from data_simulator.utils import fault
+from _common.interface import IAnnotation 
+import fault_injection.utils as fault 
 
 
 @dataclass
 class FaultCtx:
     name:str
-    current_serie: pd.Series = field(default_factory=pd.Series)
+    data: pd.DataFrame = field(default_factory=pd.DataFrame) 
 
 
 class IFault(IAnnotation):
@@ -26,7 +26,7 @@ class Corrupt(IFault):
     prob: float = 0 
     
     def inject(self, ctx: FaultCtx) -> pd.Series:
-      return self.func(ctx.current_serie, self.seed, self.prob)
+      return self.func(ctx.data, self.seed, self.prob)
 
 
 @dataclass
@@ -34,7 +34,7 @@ class Nullify(IFault):
     prob: float = 0
 
     def inject(self, ctx: FaultCtx) -> pd.Series:
-      return fault.inject_missings(ctx.current_serie, self.seed, self.prob) 
+      return fault.inject_missings(ctx.data, self.seed, self.prob) 
 
 
 @dataclass
@@ -42,14 +42,14 @@ class Misspell(IFault):
     prob: float = 0.02
     
     def inject(self, ctx: FaultCtx) -> pd.Series: 
-      return fault.inject_misspellings(ctx.current_serie, self.seed, self.prob) 
+      return fault.inject_misspellings(ctx.data, self.seed, self.prob) 
 
 @dataclass
 class MissingWord(IFault):
     prob: float = 0.02
     
     def inject(self, ctx:FaultCtx) -> pd.Series: 
-      return fault.inject_missings_words(ctx.current_serie, self.seed, self.prob) 
+      return fault.inject_missings_words(ctx.data, self.seed, self.prob) 
 
 
 @dataclass
@@ -57,7 +57,7 @@ class Duplicate(IFault):
     prob: float = 0.05
 
     def inject(self, ctx: FaultCtx) -> pd.Series:
-        return fault.inject_duplicates(ctx.current_serie, self.seed, self.prob) 
+        return fault.inject_duplicates(ctx.data, self.seed, self.prob) 
 
 @dataclass
 class Sentinel(IFault):
@@ -66,7 +66,7 @@ class Sentinel(IFault):
     prob: float = 0.05
 
     def inject(self, ctx:FaultCtx) -> pd.Series:
-        return fault.inject_sentinel(ctx.current_serie, self.seed, self.sentinels, self.prob)
+        return fault.inject_sentinel(ctx.data, self.seed, self.sentinels, self.prob)
 
 @dataclass
 class Outlier(IFault):
@@ -76,7 +76,7 @@ class Outlier(IFault):
     
     def inject(self, ctx:FaultCtx) -> pd.Series:
         return fault.inject_outliers(
-            ctx.current_serie, 
+            ctx.data, 
             self.seed, 
             self.prob, 
             self.magnitude, 

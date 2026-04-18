@@ -2,7 +2,7 @@ import pandas as pd
 from dataclasses import dataclass, field
 from typing import Any
 
-from data_simulator.interface import IAnnotation, IEntityField
+from _common.interface import IAnnotation, Field
 
 
 
@@ -11,7 +11,7 @@ from data_simulator.interface import IAnnotation, IEntityField
 class DataSimulationReport:
     _reports: dict[tuple, Any] = field(default_factory=dict)
 
-    def update(self, entity, fld: IEntityField, annotation: IAnnotation, result: Any) -> None:
+    def update(self, entity, fld: Field, annotation: IAnnotation, result: Any) -> None:
       self._reports[(entity.__name__, fld.name, annotation.__class__.__name__)] = result
 
     def get_field(self, entity, fieldname: str) -> dict:

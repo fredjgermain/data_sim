@@ -1,43 +1,12 @@
-
 from typing import Annotated, get_args, get_origin, overload
-
-from dataclasses import dataclass
-from data_simulator.annotations.primaries import PrimaryKey, CreationTime 
-from data_simulator.interface import IEntity, IEntityField, IAnnotation 
-
-
-
-# ---------------------------------------------------------------------------
-# EntityField
-# ---------------------------------------------------------------------------
-@dataclass
-class EntityField(IEntityField):
-    name:        str 
-    base_type:   type 
-    annotations: dict[type[IAnnotation], IAnnotation] 
-    
-    def get[A](self, annotation_type: type[A]) -> A | None:
-        result = self.annotations.get(annotation_type)
-        if result is not None:
-            return result 
-        return next((a for a in self.annotations.values() if isinstance(a, annotation_type)), None) 
-
-    def get_many[A](self, annotation_type: type[A]) -> list[A]:
-        return [ a for a in self.annotations.values() if isinstance(a, annotation_type) ]
-
-    def has(self, *annotation_types: type) -> bool:
-        return any(
-            isinstance(ann, t)
-            for ann in self.annotations.values()
-            for t in annotation_types
-        )
+from _common.interface import Field, IAnnotation
 
 
 
 # ---------------------------------------------------------------------------
 # Entity
 # ---------------------------------------------------------------------------
-class Entity(IEntity):
+class Entity:
     
     @classmethod
     def __init_subclass__(cls, **kwargs):
@@ -49,16 +18,16 @@ class Entity(IEntity):
             )
 
     @classmethod
-    def inspect(cls) -> dict[str, IEntityField]: 
+    def inspect(cls) -> dict[str, Field]: 
       fields = {}
       for name, hint in cls.__annotations__.items():
           if get_origin(hint) is not Annotated:
-            fields[name] = EntityField(name=name, base_type=hint, annotations={})
+            fields[name] = Field(name=name, base_type=hint, annotations={})
             continue
           
           base_type, *anns = get_args(hint) 
-          ann_dict = Entity._parse_annotations(anns) 
-          fields[name] = EntityField(name=name, base_type=base_type, annotations=ann_dict) 
+          ann_dict = cls._parse_annotations(anns) 
+          fields[name] = Field(name=name, base_type=base_type, annotations=ann_dict) 
       return fields 
   
     @classmethod
@@ -78,13 +47,13 @@ class Entity(IEntity):
 
     @classmethod
     @overload
-    def get(cls) -> list[IEntityField]: ...
+    def get(cls) -> list[Field]: ...
     @classmethod
     @overload
-    def get(cls, selection: str | type) -> IEntityField | None: ...
+    def get(cls, selection: str | type) -> Field | None: ...
     @classmethod
     @overload
-    def get(cls, selection: list[str | type]) -> list[IEntityField]: ...
+    def get(cls, selection: list[str | type]) -> list[Field]: ...
     
 
     @classmethod
@@ -96,7 +65,7 @@ class Entity(IEntity):
         return cls._search(selection)                 # list → list of fields
 
     @classmethod
-    def _search(cls, selection: list) -> list[IEntityField]:
+    def _search(cls, selection: list) -> list[Field]:
         result = []
         for name, fld in cls.inspect().items():
             ann_sel = [s for s in selection if isinstance(s, type)]

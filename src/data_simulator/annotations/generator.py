@@ -3,7 +3,8 @@ from dataclasses import dataclass, field
 from typing import Callable
 import datetime
 
-from data_simulator.interface import IEntity, IAnnotation, IEntityContext
+from _common.interface import IAnnotation
+from data_simulator.interface import Entity, EntityContext
 from data_simulator.annotations.primaries import ForeignKey, PrimaryKey
 from data_simulator.utils import generator 
 
@@ -12,9 +13,9 @@ from data_simulator.utils import generator
 class GenCtx: 
   name:str 
   N:int 
-  entity:type[IEntity] 
+  entity:type[Entity] 
   current_data:pd.DataFrame = field(default_factory=pd.DataFrame) 
-  foreign_datas:dict[type[IEntity], pd.DataFrame] = field(default_factory=dict)   
+  foreign_datas:dict[type[Entity], pd.DataFrame] = field(default_factory=dict)   
   
   # ! helper function for CustomGen
   def from_foreign(self, foreignkey:str, foreignfields:list[str]) -> pd.DataFrame: 

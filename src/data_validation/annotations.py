@@ -1,14 +1,14 @@
 import pandas as pd
 from dataclasses import dataclass, field
 
-from data_simulator.interface import IAnnotation
-
+from _common.interface import IAnnotation 
+import data_validation.utils as valid 
 
 
 @dataclass
 class ValidCtx:
-    name:str
-    current_serie: pd.Series = field(default_factory=pd.Series)
+  name:str
+  data: pd.DataFrame = field(default_factory=pd.DataFrame)
 
 
 @dataclass
@@ -31,7 +31,7 @@ class IValid(IAnnotation):
 class Unique(IValid):
 
     def validate(self, ctx:ValidCtx) -> ValidationReport: 
-      invalid_values = ctx.current_serie.duplicated(keep=False) 
+      invalid_values = ctx.data.duplicated(keep=False) 
       return ValidationReport( 
         validation_name = self.__class__.__name__, 
         field_name = ctx.name, 

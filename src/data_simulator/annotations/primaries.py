@@ -8,7 +8,8 @@ import datetime
 from dataclasses import dataclass, field
 from typing import Callable
 
-from data_simulator.interface import IEntity, IAnnotation 
+from _common.interface import IAnnotation
+from data_simulator.entity import Entity 
 from data_simulator.utils import generator 
 
 
@@ -18,7 +19,7 @@ from data_simulator.utils import generator
 class PkCtx:
     name:str 
     N:int 
-    entity:type[IEntity] 
+    entity:type[Entity] 
     pk_values:pd.Series = field(default_factory=pd.Series) 
 
 @dataclass
@@ -47,13 +48,13 @@ class PrimaryKey(IAnnotation):
 class FkCtx: 
   name:str 
   N:int 
-  entity:type[IEntity] 
+  entity:type[Entity] 
   fk_values:pd.Series = field(default_factory=pd.Series) 
   
 
 @dataclass
 class ForeignKey(IAnnotation):
-    target: type[IEntity]
+    target: type[Entity]
     seed: int | None = None 
 
     def generate(self, ctx: FkCtx) -> pd.Series: 
@@ -67,7 +68,7 @@ class ForeignKey(IAnnotation):
 class CtCtx: 
   name:str 
   N:int 
-  entity:type[IEntity] 
+  entity:type[Entity] 
   agg_creation_time:pd.Series = field(default_factory=pd.Series) 
 
 

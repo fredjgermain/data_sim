@@ -8,6 +8,7 @@ from data_simulator.entity import Entity
 from data_simulator.context import EntityContext
 
 
+
 class FactoryCtx:
   
   @classmethod
@@ -53,6 +54,8 @@ class FactoryCtx:
     current_data = ctx.get_data(preexisting=False) 
     foreign_datas = { e:c.get_data() for e, c in entities.items() } 
     return GenCtx(name, ctx.N, ctx.entity, current_data, foreign_datas) 
+  
+  
 
 
 def from_foreign(
