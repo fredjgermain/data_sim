@@ -30,7 +30,6 @@ class FaultReport:
 
 class ValidationProfile(Profile[IFault]):
   
-  
     @classmethod 
     def inject(cls, data:pd.DataFrame) -> FaultReport: 
       report = FaultReport()
