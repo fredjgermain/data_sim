@@ -19,7 +19,6 @@ class IFault(IAnnotation):
       raise NotImplementedError
 
 
-
 @dataclass
 class Corrupt(IFault): 
     func:Callable[[pd.DataFrame, Any,  float], pd.Series] 
@@ -44,6 +43,7 @@ class Misspell(IFault):
     def inject(self, ctx: FaultCtx) -> pd.Series: 
       return fault.inject_misspellings(ctx.data[ctx.name], self.seed, self.prob) 
 
+
 @dataclass
 class MissingWord(IFault):
     prob: float = 0.02
@@ -59,25 +59,27 @@ class Duplicate(IFault):
     def inject(self, ctx: FaultCtx) -> pd.Series:
         return fault.inject_duplicates(ctx.data[ctx.name], self.seed, self.prob) 
 
+
 @dataclass
 class Sentinel(IFault):
     sentinels: list
     prob: float = 0.05
 
     def inject(self, ctx:FaultCtx) -> pd.Series:
-        return fault.inject_sentinel(ctx.data[ctx.name], self.seed, self.sentinels, self.prob)
+      return fault.inject_sentinel(ctx.data[ctx.name], self.seed, self.sentinels, self.prob)
 
-@dataclass
-class Outlier(IFault):
-    prob: float = 0.03
-    magnitude: float = 3.0
-    direction: Literal['both', 'up', 'down'] = 'both'
+
+@dataclass 
+class Outlier(IFault): 
+    prob: float = 0.03 
+    magnitude: float = 3.0 
+    direction: Literal['both', 'up', 'down'] = 'both' 
     
-    def inject(self, ctx:FaultCtx) -> pd.Series:
-        return fault.inject_outliers(
-            ctx.data[ctx.name], 
-            self.seed, 
-            self.prob, 
-            self.magnitude, 
-            self.direction)
+    def inject(self, ctx:FaultCtx) -> pd.Series: 
+      return fault.inject_outliers( 
+        ctx.data[ctx.name], 
+        self.seed, 
+        self.prob, 
+        self.magnitude, 
+        self.direction) 
 

@@ -22,10 +22,17 @@ from fault_injection.annotations import Missing
 # Fault injection =========================================
 from fault_injection.fault_profile import FaultProfile 
 
+a = None
+print(bool(a))
+if not a:
+  print('is empty')
 
-@dataclass 
-class CustomerFaultProfile(FaultProfile): 
-  email: Annotated[str, Missing(0.2)] 
 
-print( CustomerFaultProfile.inspect() ) 
+# a = [1]
+# print(bool(a))
+
+# if a:
+#   print(a)
+  
+# if not a:
 
