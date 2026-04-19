@@ -6,6 +6,7 @@ from _common.interface import Profile, Field
 from data_validation.annotations import IValid, ValidCtx
 
 
+
 @dataclass
 class ValidationReport:
     _reports: dict[tuple, Any] = field(default_factory=dict)
@@ -28,12 +29,12 @@ class ValidationReport:
       
 
 class ValidationProfile(Profile[IValid]):
-  
-  @classmethod 
-  def validate(cls, data:pd.DataFrame) -> ValidationReport: 
-    report = ValidationReport()
-    for name, fld in cls.inspect().items(): 
-      for ann in fld.get_many(IValid): 
-        res = ann.validate(ValidCtx(name, data)) 
-        report.update(fld, ann, res) 
-    return report
+    
+    @classmethod 
+    def validate(cls, data:pd.DataFrame) -> ValidationReport: 
+      report = ValidationReport()
+      for name, fld in cls.inspect().items(): 
+        for ann in fld.get_many(IValid): 
+          res = ann.validate(ValidCtx(name, data)) 
+          report.update(fld, ann, res) 
+      return report

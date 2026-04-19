@@ -1,4 +1,3 @@
-import pandas as pd 
 from dataclasses import dataclass 
 from typing import Annotated, get_args, get_origin 
 

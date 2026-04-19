@@ -30,7 +30,7 @@ class Corrupt(IFault):
 
 
 @dataclass
-class Nullify(IFault):
+class Missing(IFault):
     prob: float = 0
 
     def inject(self, ctx: FaultCtx) -> pd.Series:

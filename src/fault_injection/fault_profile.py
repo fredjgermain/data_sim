@@ -28,7 +28,7 @@ class FaultReport:
       ] 
       
 
-class ValidationProfile(Profile[IFault]):
+class FaultProfile(Profile[IFault]):
   
     @classmethod 
     def inject(cls, data:pd.DataFrame) -> FaultReport: 
