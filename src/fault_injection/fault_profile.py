@@ -26,15 +26,14 @@ class FaultReport:
         (fieldname, ann, res.shapes[0] if isinstance(res, pd.Series) else res ) 
         for (fieldname, ann), res in self._reports.items() 
       ] 
-      
 
-class FaultProfile(Profile[IFault]):
+
+class FaultProfile(Profile):
   
     @classmethod 
-    def inject(cls, data:pd.DataFrame) -> FaultReport: 
-      report = FaultReport()
+    def inject(cls, data:pd.DataFrame) -> pd.DataFrame: 
+      fault_data = data.copy() 
       for name, fld in cls.inspect().items(): 
         for ann in fld.get_many(IFault): 
-          res = ann.inject(FaultCtx(name, data)) 
-          report.update(fld, ann, res) 
-      return report
+          fault_data[name] = ann.inject(FaultCtx(name, fault_data)) 
+      return fault_data 

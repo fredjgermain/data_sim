@@ -14,8 +14,9 @@ from data_simulator.annotations.generator import (
 from data_simulator.annotations.primaries import (
   PrimaryKey, CreationTime, ForeignKey
 )
-from data_simulator.utils import generator
-from fault_injection.annotations import Missing
+from data_simulator.utils import generator 
+from fault_injection.fault_profile import FaultProfile 
+from fault_injection.annotations import Missing 
 
 
 # Region --------------------------------------------------
@@ -99,24 +100,26 @@ except:
 
 gens = sim.get_data(preexisting=False)
 
-# for e, data in gens.items():
+# for e, data in gens.items(): 
 #   print(f'\n=== {e.__name__} === {data.shape}') 
 #   print(data.head()) 
 
 
-# Fault injection =========================================
-from fault_injection.fault_profile import FaultProfile 
+# # Fault injection =========================================
+# from fault_injection.fault_profile import FaultProfile 
 
 @dataclass 
 class CustomerFaultProfile(FaultProfile): 
-  email: Annotated[str, Missing(0.2)] 
+  email: Annotated[str, Missing(0.1)] 
 
 
-gens[gens[Customer]] = CustomerFaultProfile.inject(gens[Customer]) 
+gens[Customer] = CustomerFaultProfile.inject(gens[Customer]) 
 
 
 for e, data in gens.items(): 
   print(f'\n=== {e.__name__} === {data.shape}') 
+  if 'email' in data.columns:
+    print(data['email'].isna().sum())
   print(data.head()) 
 
 

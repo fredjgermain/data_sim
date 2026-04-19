@@ -30,8 +30,7 @@ class Field:
         )
 
 
-
-class Profile[A:IAnnotation]:
+class Profile:
 
     @classmethod
     def inspect(cls) -> dict[str, Field]: 
@@ -42,21 +41,7 @@ class Profile[A:IAnnotation]:
             continue
           
           base_type, *anns = get_args(hint) 
-          ann_dict = Profile._parse_annotations(anns) 
+          ann_dict = {type(a):a for a in anns} 
           fields[name] = Field(name=name, base_type=base_type, annotations=ann_dict) 
       return fields 
   
-    @classmethod
-    def _parse_annotations(cls, args) -> dict[type[A], A]:
-        ann_dict: dict[type[A], A] = {}
-        for ann in args:
-            if not isinstance(ann, A):
-                continue
-            ann_type = type(ann)
-            if ann_type in ann_dict:
-                raise TypeError(
-                    f"Duplicate annotation type '{ann_type.__name__}' on the same field."
-                )
-            ann_dict[ann_type] = ann
-        return ann_dict
-      
