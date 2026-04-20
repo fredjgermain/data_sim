@@ -10,65 +10,64 @@ def uniqueness_validity(serie: pd.Series, tolerance: float = 0.0) -> tuple[float
     duplicates_mask = serie.duplicated(keep=False) 
     duplicates = serie[duplicates_mask] 
     
-    # Calculate percentage of non-unique values 
-    if len(serie) == 0: 
-        pct_non_unique = 0.0 
-    else: 
-        pct_non_unique = len(duplicates) / len(serie) 
+    # Percent of non-unique values 
+    percent = 0.0 if len(serie) == 0 else len(duplicates) / len(serie) 
     
     # Check if within tolerance
-    passes = pct_non_unique <= tolerance
+    passes = percent <= tolerance
     
-    return pct_non_unique, duplicates, passes
+    return percent, duplicates, passes
 
 
 
 def completeness_validity(serie: pd.Series, count_as_missing: list = [], tolerance: float = 0.0) -> tuple[float, pd.Series, bool]:
     # Start with standard missing values (NaN, None, NaT)
-    missing_mask = serie.isna()
-    
-    # Add custom missing values
-    if count_as_missing:
-        for missing_value in count_as_missing:
-            missing_mask = missing_mask | (serie == missing_value)
-    
-    missing_values = serie[missing_mask]
+    missing_mask = serie.isna() | serie.isin(count_as_missing) 
+    missing_values = serie[missing_mask] 
     
     # Calculate percentage of missing values
-    if len(serie) == 0:
-        pct_missing = 0.0
-    else:
-        pct_missing = len(missing_values) / len(serie) 
+    percent = 0.0 if len(serie) == 0 else len(missing_values) / len(serie) 
     
     # Check if within tolerance (strictly less than)
-    passes = pct_missing <= tolerance
+    passes = percent <= tolerance
    
-    return pct_missing, missing_values, passes
+    return percent, missing_values, passes
 
 
 
 def range_validity(serie: pd.Series, min: float = None, max: float = None) -> tuple[float, pd.Series, bool]:
+  
+  valid = ((min == None) | (serie >= min)) & ((max == None) | (serie <= max)) 
+  out_of_range = serie[~valid] 
+  
+  percent = 0.0 if len(serie) == 0 else len(out_of_range) / len(serie)
+  passes = percent == 0
+  return percent, out_of_range, passes 
 
-    # Use -inf and +inf as defaults when bounds are None
-    min_bound = min if min is not None else float('-inf')
-    max_bound = max if max is not None else float('inf')
+
+
+def temporal_validity(serie: pd.Series, min_date: datetime = None, max_date: datetime = None) -> tuple[float, pd.Series, bool]:
+  
+  serie_clean = serie_clean = serie.dropna().astype('int64') 
+  min = pd.Timestamp(min_date).value if min_date else None 
+  max = pd.Timestamp(max_date).value if max_date else None 
+  
+  percent, invalid, passes = range_validity(serie_clean, min, max) 
+  invalid = serie[invalid.index] 
+  return percent, invalid, passes  
+
+
+
+def string_length_validity(serie: pd.Series, min_length: int = 0, max_length: int = None) -> tuple[float, pd.Series, bool]:
+    # Get non-null values
+    serie_clean = serie.dropna() 
     
-    # Find values outside the range (excluding NaN)
-    out_of_range_mask = (serie < min_bound) | (serie > max_bound)
-    out_of_range = serie[out_of_range_mask]
-    
-    # Calculate percentage of out-of-range values
-    # Note: NaN values are automatically excluded from comparison
-    valid_count = serie.notna().sum()
-    if valid_count == 0:
-        pct_out_of_range = 0.0
-    else:
-        pct_out_of_range = len(out_of_range) / valid_count 
-    
-    # Check if valid (no out-of-range values)
-    passes = len(out_of_range) == 0
-    
-    return pct_out_of_range, out_of_range, passes
+    # Convert to string and get lengths
+    lengths = serie_clean.astype(str).str.len() 
+    percent, invalid, passes = range_validity(lengths, min_length, max_length) 
+    invalid = serie[invalid.index] 
+    return percent, invalid, passes  
+
 
 
 def categorical_validity(serie: pd.Series, categories: list) -> tuple[float, pd.Series, bool]:
@@ -78,18 +77,30 @@ def categorical_validity(serie: pd.Series, categories: list) -> tuple[float, pd.
     
     # Calculate percentage of out-of-category values
     valid_count = serie.notna().sum()
-    if valid_count == 0:
-        pct_out_of_category = 0.0
-    else:
-        pct_out_of_category = len(out_of_category) / valid_count 
+    percent = 0.0 if valid_count == 0 else len(out_of_category) / valid_count
     
     # Check if valid (no out-of-category values)
-    passes = len(out_of_category) == 0
+    passes = percent == 0.0
     
-    return pct_out_of_category, out_of_category, passes
+    return percent, out_of_category, passes
+
+
+
+def monotonic_validity(serie: pd.Series, increasing:bool = True, strict:bool = False) -> tuple[float, pd.Series, bool]: 
+  serie_clean = serie.dropna()
+  diff = serie_clean.diff().dropna()
   
+  is_mono = (diff >= 0) | pd.isnull(diff) if increasing else (diff <= 0) | pd.isnull(diff)
+  is_strict = (diff != 0) | pd.isnull(diff) if strict else pd.Series() 
+  invalid = serie.loc[diff[~is_mono | ~is_strict].index] 
   
+  percent = len(invalid) / len(serie) 
+  passes = percent == 0 
   
+  return percent, invalid, passes 
+
+
+
 def outlier_validity(
     serie: pd.Series, 
     multiplier: float = 1.5,  # Standard is 1.5, use 3.0 for "extreme" outliers
@@ -115,14 +126,14 @@ def outlier_validity(
     outliers = serie[outlier_mask]
     
     # Calculate percentage of outliers
-    valid_count = len(serie_clean)
-    pct_outliers = len(outliers) / valid_count 
+    percent = len(outliers) / len(serie_clean)
     
     # Check if within tolerance
-    passes = pct_outliers <= tolerance
+    passes = percent <= tolerance
     
-    return pct_outliers, outliers, passes
-  
+    return percent, outliers, passes
+
+
 
 def format_validity(serie: pd.Series, pattern: str) -> tuple[float, pd.Series, bool]:
     # Compile regex pattern
@@ -139,39 +150,13 @@ def format_validity(serie: pd.Series, pattern: str) -> tuple[float, pd.Series, b
     invalid_values = serie_clean[invalid_mask]
     
     # Calculate percentage
-    pct_invalid = len(invalid_values) / len(serie_clean)
+    percent = len(invalid_values) / len(serie_clean)
     
     # Check if valid
-    passes = len(invalid_values) == 0
+    passes = percent == 0
     
-    return pct_invalid, invalid_values, passes
+    return percent, invalid_values, passes
 
-
-def string_length_validity(serie: pd.Series, min_length: int = None, max_length: int = None) -> tuple[float, pd.Series, bool]:
-    # Get non-null values
-    serie_clean = serie.dropna()
-    
-    if len(serie_clean) == 0:
-        return 0.0, pd.Series(dtype=serie.dtype), True
-    
-    # Convert to string and get lengths
-    lengths = serie_clean.astype(str).str.len()
-    
-    # Use -inf and +inf as defaults when bounds are None
-    min_bound = min_length if min_length is not None else 0
-    max_bound = max_length if max_length is not None else float('inf')
-    
-    # Find values with invalid lengths
-    invalid_mask = (lengths < min_bound) | (lengths > max_bound)
-    invalid_values = serie_clean[invalid_mask]
-    
-    # Calculate percentage
-    pct_invalid = len(invalid_values) / len(serie_clean)
-    
-    # Check if valid
-    passes = len(invalid_values) == 0
-    
-    return pct_invalid, invalid_values, passes
 
 
 def datatype_validity(serie: pd.Series, expected_dtype: str) -> tuple[float, pd.Series, bool]:
@@ -206,70 +191,12 @@ def datatype_validity(serie: pd.Series, expected_dtype: str) -> tuple[float, pd.
     invalid_values = serie_clean.loc[invalid_indices]
     
     # Calculate percentage
-    pct_invalid = len(invalid_values) / len(serie_clean)
+    percent = len(invalid_values) / len(serie_clean)
     
     # Check if valid
-    passes = len(invalid_values) == 0
+    passes = percent == 0
     
-    return pct_invalid, invalid_values, passes
-
-
-def temporal_validity(serie: pd.Series, min_date: str = None, max_date: str = None) -> tuple[float, pd.Series, bool]:
-    # Get non-null values
-    serie_clean = serie.dropna()
-    
-    if len(serie_clean) == 0:
-        return 0.0, pd.Series(dtype=serie.dtype), True
-    
-    # Convert to datetime
-    try:
-        dates = pd.to_datetime(serie_clean)
-    except:
-        # If conversion fails, all values are invalid
-        return 1.0, serie_clean, False
-    
-    # Parse date bounds
-    def parse_date(date_str):
-        if date_str is None:
-            return None
-        
-        # Handle relative dates
-        if date_str.startswith('today'):
-            base = pd.Timestamp.now().normalize()
-            if len(date_str) > 5:
-                # Parse offset like 'today-30d' or 'today+1y'
-                offset_str = date_str[5:]  # Get the offset part
-                sign = 1 if offset_str[0] == '+' else -1
-                value = int(offset_str[1:-1])
-                unit = offset_str[-1]
-                
-                if unit == 'd':
-                    return base + sign * timedelta(days=value)
-                elif unit == 'w':
-                    return base + sign * timedelta(weeks=value)
-                elif unit == 'm':
-                    return base + sign * pd.DateOffset(months=value)
-                elif unit == 'y':
-                    return base + sign * pd.DateOffset(years=value)
-            return base
-        
-        # Parse ISO date
-        return pd.to_datetime(date_str)
-    
-    min_bound = parse_date(min_date) if min_date else pd.Timestamp.min
-    max_bound = parse_date(max_date) if max_date else pd.Timestamp.max
-    
-    # Find dates outside range
-    invalid_mask = (dates < min_bound) | (dates > max_bound)
-    invalid_values = serie_clean[invalid_mask]
-    
-    # Calculate percentage
-    pct_invalid = len(invalid_values) / len(serie_clean)
-    
-    # Check if valid
-    passes = len(invalid_values) == 0
-    
-    return pct_invalid, invalid_values, passes
+    return percent, invalid_values, passes
 
 
 
@@ -305,39 +232,6 @@ def cardinality_validity(serie: pd.Series, min_unique: int = None, max_unique: i
     return pct_deviation, unique_series, passes
 
 
+  
+  
 
-def monotonic_validity(serie: pd.Series, direction: str) -> tuple[float, pd.Series, bool]:
-    # Get non-null values
-    serie_clean = serie.dropna()
-    
-    if len(serie_clean) <= 1:
-        return 0.0, pd.Series(dtype=serie.dtype), True
-    
-    # Calculate differences
-    diffs = serie_clean.diff()
-    
-    # Check based on direction
-    if direction == 'increasing':
-        violations_mask = diffs <= 0
-    elif direction == 'decreasing':
-        violations_mask = diffs >= 0
-    elif direction == 'non-decreasing':
-        violations_mask = diffs < 0
-    elif direction == 'non-increasing':
-        violations_mask = diffs > 0
-    else:
-        raise ValueError(f"Invalid direction: {direction}. Must be 'increasing', 'decreasing', 'non-decreasing', or 'non-increasing'")
-    
-    # Skip first value (diff is NaN)
-    violations_mask.iloc[0] = False
-    
-    # Get violating values
-    violations = serie_clean[violations_mask]
-    
-    # Calculate percentage
-    pct_violations = len(violations) / (len(serie_clean) - 1)
-    
-    # Check if valid
-    passes = len(violations) == 0
-    
-    return pct_violations, violations, passes
