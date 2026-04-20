@@ -12,25 +12,26 @@ class FaultCtx:
     data: pd.DataFrame = field(default_factory=pd.DataFrame) 
 
 
-class IFault(IAnnotation):
-    seed: int | None = None 
+class IFault(IAnnotation): 
 
     def inject(self, ctx:FaultCtx) -> pd.Series:
       raise NotImplementedError
 
 
 @dataclass
-class Corrupt(IFault): 
-    func:Callable[[pd.DataFrame, Any,  float], pd.Series] 
-    prob: float = 0 
+class CustomFault(IFault): 
+    func:Callable[[FaultCtx, Any, float], pd.Series] 
+    prob: float = 0.05 
+    seed: int | None = None 
     
-    def inject(self, ctx: FaultCtx) -> pd.Series:
-      return self.func(ctx.data, self.seed, self.prob)
+    def inject(self, ctx: FaultCtx) -> pd.Series: 
+      return self.func(ctx, self.seed, self.prob) 
 
 
 @dataclass
 class Missing(IFault):
-    prob: float = 0
+    prob: float = 0.05 
+    seed: int | None = None 
 
     def inject(self, ctx: FaultCtx) -> pd.Series:
       return fault.inject_missings(ctx.data[ctx.name], self.seed, self.prob) 
@@ -38,7 +39,8 @@ class Missing(IFault):
 
 @dataclass
 class Misspell(IFault):
-    prob: float = 0.02
+    prob: float = 0.05
+    seed: int | None = None 
     
     def inject(self, ctx: FaultCtx) -> pd.Series: 
       return fault.inject_misspellings(ctx.data[ctx.name], self.seed, self.prob) 
@@ -46,7 +48,8 @@ class Misspell(IFault):
 
 @dataclass
 class MissingWord(IFault):
-    prob: float = 0.02
+    prob: float = 0.05
+    seed: int | None = None 
     
     def inject(self, ctx:FaultCtx) -> pd.Series: 
       return fault.inject_missings_words(ctx.data[ctx.name], self.seed, self.prob) 
@@ -55,6 +58,7 @@ class MissingWord(IFault):
 @dataclass
 class Duplicate(IFault):
     prob: float = 0.05
+    seed: int | None = None 
 
     def inject(self, ctx: FaultCtx) -> pd.Series:
         return fault.inject_duplicates(ctx.data[ctx.name], self.seed, self.prob) 
@@ -64,6 +68,7 @@ class Duplicate(IFault):
 class Sentinel(IFault):
     sentinels: list
     prob: float = 0.05
+    seed: int | None = None 
 
     def inject(self, ctx:FaultCtx) -> pd.Series:
       return fault.inject_sentinel(ctx.data[ctx.name], self.seed, self.sentinels, self.prob)
@@ -71,9 +76,10 @@ class Sentinel(IFault):
 
 @dataclass 
 class Outlier(IFault): 
-    prob: float = 0.03 
+    prob: float = 0.05 
     magnitude: float = 3.0 
     direction: Literal['both', 'up', 'down'] = 'both' 
+    seed: int | None = None 
     
     def inject(self, ctx:FaultCtx) -> pd.Series: 
       return fault.inject_outliers( 

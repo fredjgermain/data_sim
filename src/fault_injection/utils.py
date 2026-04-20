@@ -21,6 +21,7 @@ def inject_sentinel(
     return serie
 
 
+
 def inject_outliers(
     serie: pd.Series,
     seed,

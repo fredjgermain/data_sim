@@ -6,11 +6,10 @@ from typing import Annotated
 from dataclasses import dataclass
 
 
-from context import EntityContext
-from interface import IEntity, IEntityContext
-from entity import Entity, EntityField
-from annotations.primaries import PrimaryKey, ForeignKey, CreationTime, PkCtx, FkCtx, CtCtx
-
+from data_simulator.entity import Entity
+from data_simulator.context import EntityContext
+from data_simulator.annotations.primaries import PrimaryKey, CreationTime, ForeignKey
+from data_simulator.annotations.factory_ctx import FactoryCtx
 
 
 @dataclass
@@ -48,8 +47,8 @@ class Test_Pk_Make_Ctx:
     ('region_id', entities[Region], entities[Region].preexisting['region_id']), 
     ('customer_id', entities[Customer], pd.Series()), 
   ])
-  def test_pk_make_ctx(self, name, current_ctx:IEntityContext, expected): 
-    pk_ctx = PkCtx.make_ctx(current_ctx) 
+  def test_pk_make_ctx(self, name, current_ctx:EntityContext, expected): 
+    pk_ctx = FactoryCtx.make_pkctx(current_ctx) 
     
     assert pk_ctx.name == name 
     assert pk_ctx.entity == current_ctx.entity 
@@ -62,8 +61,8 @@ class Test_Fk_Make_Ctx:
     #(None, entities[Region], pd.Series()), Region has no foreign keys in the first place it should not be called. 
     ('region_id', entities[Customer], entities[Region].get_serie(PrimaryKey)), 
   ])
-  def test_pk_make_ctx(self, name, current_ctx:IEntityContext, expected): 
-    fk_ctx = FkCtx.make_ctx(name, current_ctx, entities) 
+  def test_pk_make_ctx(self, name, current_ctx:EntityContext, expected): 
+    fk_ctx = FactoryCtx.make_fkctx(name, current_ctx, entities) 
     
     assert fk_ctx.name == name 
     assert fk_ctx.entity == current_ctx.entity 

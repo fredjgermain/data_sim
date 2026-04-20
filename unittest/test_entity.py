@@ -18,39 +18,35 @@ import pytest
 from typing import Annotated
 from dataclasses import dataclass
 
-from entity import Entity, EntityField
-from annotations.primaries import PrimaryKey, CreationTime
-from annotations.generator import GenNormal, GenUniform, GenFaker, IGen, IGen
-from annotations.validation import Unique
-from annotations.fault import Nullify
-from annotations.fault import IFault
+from data_simulator.entity import Entity
+from data_simulator.annotations.primaries import (
+  PrimaryKey, CreationTime)
+from data_simulator.annotations.generator import (
+  GenNormal, GenUniform, GenFaker, IGen
+)
 
-
-# ---------------------------------------------------------------------------
-# Entity fixtures
-# ---------------------------------------------------------------------------
 
 @dataclass
 class FullEntity(Entity):
-    id:         Annotated[int,              PrimaryKey()]
+    id:         Annotated[int,    PrimaryKey()]
     created_at: Annotated[datetime.datetime, CreationTime(
                     start=datetime.datetime(2020, 1, 1),
                     end=datetime.datetime(2024, 1, 1),
                 )]
-    score:      Annotated[float,            GenNormal(mean=50, std=10)]
-    label:      Annotated[str,              GenFaker("name") ]
-    amount:     Annotated[float,            GenUniform(min=0, max=100), Nullify(prob=0.05)]
+    score:      Annotated[float,  GenNormal(mean=50, std=10)]
+    label:      Annotated[str,    GenFaker("name") ]
+    amount:     Annotated[float,  GenUniform(min=0, max=100)]
 
 
 @dataclass
 class NoPrimaryKeyEntity(Entity):
-    score: Annotated[float, GenNormal(mean=0, std=1)]
+    score: Annotated[float,   GenNormal(mean=0, std=1)]
 
 
 @dataclass
 class NoCreationTimeEntity(Entity):
-    id:    Annotated[int,   PrimaryKey()]
-    score: Annotated[float, GenNormal(mean=0, std=1)]
+    id:    Annotated[int,     PrimaryKey()]
+    score: Annotated[float,   GenNormal(mean=0, std=1)]
 
 
 @dataclass
@@ -94,7 +90,6 @@ class TestInspect:
         (FullEntity, "id",     PrimaryKey),
         (FullEntity, "score",  GenNormal),
         (FullEntity, "label",  GenFaker),
-        (FullEntity, "amount", Nullify),
     ])
     def test_inspect_annotations_present(self, entity:type[Entity], field_name, expected_annotation_type):
         assert expected_annotation_type in entity.inspect()[field_name].annotations
@@ -122,7 +117,6 @@ class TestGet:
         (FullEntity,         [CreationTime],      {"created_at"}),
         # By parent annotation type
         (FullEntity,         [IGen],              {"score", "label", "amount"}),
-        (FullEntity,         [IFault],            {"amount"}),
         # Mixed name and type
         (FullEntity,         ["id", GenNormal],   {"id", "score"}),
         # Unknown name

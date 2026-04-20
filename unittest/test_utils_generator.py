@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from utils.generator import (
+from data_simulator.utils.generator import (
     generate_gamma,
     generate_poisson,
     generate_exponential,

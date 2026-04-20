@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from utils.fault import (
+from fault_injection.utils import (
     inject_sentinel,
     inject_outliers,
     inject_duplicates,

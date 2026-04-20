@@ -16,10 +16,10 @@ import pandas as pd
 from typing import Annotated
 from dataclasses import dataclass
 
-from context import EntityContext
-from entity import Entity
-from annotations.primaries import PrimaryKey, CreationTime
-from annotations.generator import GenNormal
+from data_simulator.entity import Entity
+from data_simulator.context import EntityContext
+from data_simulator.annotations.primaries import PrimaryKey, CreationTime
+from data_simulator.annotations.generator import GenNormal
 
 
 # ---------------------------------------------------------------------------
