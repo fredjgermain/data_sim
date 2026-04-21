@@ -65,13 +65,13 @@ class Duplicate(IFault):
 
 
 @dataclass
-class Sentinel(IFault):
-    sentinels: list
+class Insert(IFault):
+    insertions: list
     prob: float = 0.05
     seed: int | None = None 
 
     def inject(self, ctx:FaultCtx) -> pd.Series:
-      return fault.inject_sentinel(ctx.data[ctx.name], self.seed, self.sentinels, self.prob)
+      return fault.inject_insert(ctx.data[ctx.name], self.seed, self.insertions, self.prob)
 
 
 @dataclass 

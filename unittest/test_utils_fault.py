@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from fault_injection.utils import (
-    inject_sentinel,
+    inject_insert,
     inject_outliers,
     inject_duplicates,
     inject_missings,
@@ -36,7 +36,7 @@ class TestInjectSentinel:
 
     @pytest.mark.parametrize("prob", [0.0, 1.0])
     def test_extreme_probabilities(self, numeric_series, prob):
-        result = inject_sentinel(numeric_series, seed=42, sentinels=[-999], prob=prob)
+        result = inject_insert(numeric_series, seed=42, sentinels=[-999], prob=prob)
 
         if prob == 0.0:
             assert result.equals(numeric_series)
@@ -45,7 +45,7 @@ class TestInjectSentinel:
 
     @pytest.mark.parametrize("sentinels", [[-1], [-1, -2, -3]])
     def test_values_are_from_sentinels(self, numeric_series, sentinels):
-        result = inject_sentinel(numeric_series, seed=42, sentinels=sentinels, prob=1.0)
+        result = inject_insert(numeric_series, seed=42, sentinels=sentinels, prob=1.0)
         assert set(result.unique()).issubset(set(sentinels))
 
 

@@ -5,7 +5,7 @@ from typing import Literal
 
 
 
-def inject_sentinel(
+def inject_insert(
     serie: pd.Series,
     seed,
     sentinels: list,

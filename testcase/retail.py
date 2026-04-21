@@ -15,8 +15,7 @@ from data_simulator.annotations.primaries import (
   PrimaryKey, CreationTime, ForeignKey
 )
 from data_simulator.utils import generator 
-from fault_injection.fault_profile import FaultProfile 
-from fault_injection.annotations import Missing 
+
 
 
 # Region --------------------------------------------------
@@ -31,6 +30,7 @@ class Region(Entity):
     code:       Annotated[str,  GenPattern(r'[A-Z]{2}-\d{3}')]
 
 
+
 df_region_pre = pd.DataFrame({
     "region_id":  [1, 2],
     "founded_at": [datetime.datetime(2000, 6, 1), datetime.datetime(2001, 3, 15)],
@@ -39,14 +39,13 @@ df_region_pre = pd.DataFrame({
 })
 
 
+
 # Customer ------------------------------------------------
-# Custom generation function
 def customer_id_fn(seed, ctx:PkCtx) -> pd.Series: 
   return generator.generate_ids(seed, ctx.N) 
 
 def age_group(seed, ctx:GenCtx) -> pd.Series: 
   return ctx.current_data['age'].apply( lambda a: "senior" if a >= 65 else "adult" if a >= 30 else "young" ) 
-
 
 @dataclass
 class Customer(Entity):
@@ -62,6 +61,7 @@ class Customer(Entity):
     age:         Annotated[int,  GenNormal(min=18, max=90, mean=40, std=15, rounding=0)]
     code:        Annotated[str,  GenPattern(r'CUST-[A-Z]{3}-\d{4}')]
     age_group:   Annotated[str,  CustomGen(fn=age_group)]
+
 
 
 # Transaction ---------------------------------------------
@@ -93,33 +93,42 @@ entities = {
 sim = DataSimulator(entities) 
 try:
   sim.simulate() 
-  sim._report.failures() 
   print(sim.get_summary()) 
 except:
   print(sim.get_failures()) 
 
 gens = sim.get_data(preexisting=False)
 
-# for e, data in gens.items(): 
-#   print(f'\n=== {e.__name__} === {data.shape}') 
-#   print(data.head()) 
 
 
 # # Fault injection =========================================
-# from fault_injection.fault_profile import FaultProfile 
+from fault_injection.fault_profile import FaultProfile 
+from fault_injection.annotations import Missing, Insert
+from data_validation.validation_profile import ValidationProfile 
+from data_validation.annotations import Completeness 
+
+
 
 @dataclass 
 class CustomerFaultProfile(FaultProfile): 
-  email: Annotated[str, Missing(0.1)] 
-
+  email: Annotated[str, Missing(0.1), Insert(insertions=['', 'asdas'], prob=0.1)] 
 
 gens[Customer] = CustomerFaultProfile.inject(gens[Customer]) 
 
 
+
+@dataclass 
+class CustomerValidationProfile(ValidationProfile): 
+  email: Annotated[str, Completeness(tolerance=0.05, count_as_missing=['', 'asdas']) ] 
+
+validation_report = CustomerValidationProfile.validate(gens[Customer]) 
+print(validation_report)
+
+
 for e, data in gens.items(): 
   print(f'\n=== {e.__name__} === {data.shape}') 
-  if 'email' in data.columns:
-    print(data['email'].isna().sum())
+  if 'email' in data.columns: 
+    print(data['email'].isna().sum()) 
   print(data.head()) 
 
 
